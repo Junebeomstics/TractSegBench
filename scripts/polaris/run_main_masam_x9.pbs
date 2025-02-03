@@ -1,0 +1,17 @@
+#!/bin/bash -l 
+#PBS -A NeuroX
+#PBS -N tractseg
+#PBS -l select=1:system=polaris
+#PBS -l filesystems=home:grand
+#PBS -l walltime=12:00:00
+#PBS -q preemptable
+#PBS -j oe
+#PBS -o /grand/NeuroX/junbeom/TractSegVis/TractSeg/logs
+
+module use /soft/modulefiles; module load conda; conda activate masam
+
+cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
+
+# bigger model (vit_l) -> using pretrained patch embedding layer with new conv1d layer
+./ExpRunner --config Zenedo_experiment_MASAM_x9 --en run_with_default_settings_MASAM_x9 --train True --test True --seg --lw # --rt --with_id TRAC-174
+#./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
