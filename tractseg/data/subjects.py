@@ -95,16 +95,21 @@ def all_subjects_biobank_20k():
 
 all_subjects_biobank_10 = ["1000013", "1000024", "1000036", "1000048", "1000055", "1000067", "1000072", "1000080",
                            "1000099", "1000106"]
-
 subjects_90g_incomplete = ["601127", "620434", "644044", "715041", "749361", "753251", "792766", "872764", "901038",
                            "951457", "979984", "814649"]
+subjects_vis_incomplete = ["101006","111312","168139","353740","727654","770352"]
+
 all_subjects_FINAL_with_complete_90g = [s for s in all_subjects_FINAL if s not in subjects_90g_incomplete]
+
+all_subjects_FINAL_with_complete_vis = [s for s in all_subjects_HCP_all if s not in subjects_vis_incomplete]
 
 def get_all_subjects(dataset="HCP"):
     if dataset == "HCP" or dataset == "HCP_final" or dataset == "HCP_32g":
         return all_subjects_FINAL
-    elif dataset == "HCP_90g":
+    elif dataset == "HCP_90g": # all HCP subjects except belonging to 90g incomplete
         return all_subjects_FINAL_with_complete_90g
+    elif dataset == "HCP_vis": # all HCP subjects except belonging to 90g incomplete
+        return all_subjects_FINAL_with_complete_vis
     elif dataset == "HCP_all":
         return all_subjects_HCP_all
     elif dataset.startswith("Schizo"):

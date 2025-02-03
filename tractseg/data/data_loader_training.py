@@ -10,6 +10,7 @@ from __future__ import division
 from __future__ import print_function
 
 from os.path import join
+import os
 import random
 
 import numpy as np
@@ -21,6 +22,7 @@ from batchgenerators.transforms.noise_transforms import GaussianNoiseTransform
 from batchgenerators.transforms.noise_transforms import GaussianBlurTransform
 from batchgenerators.transforms.spatial_transforms import SpatialTransform
 from batchgenerators.transforms.spatial_transforms import ZoomTransform
+from batchgenerators.transforms.spatial_transforms import ResizeTransform
 from batchgenerators.transforms.spatial_transforms import MirrorTransform
 from batchgenerators.transforms.utility_transforms import NumpyToTensor
 from batchgenerators.transforms.abstract_transforms import Compose
@@ -59,60 +61,59 @@ def load_training_data(Config, subject):
         data = nib.load(filepath + ".nii.gz").get_fdata()
         # data = np.load(filepath + ".npy", mmap_mode="r")
         return data
-
     if Config.FEATURES_FILENAME == "12g90g270g":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
         elif rnd_choice < 0.66:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
         else:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
 
     elif Config.FEATURES_FILENAME == "12g90g270gRaw32g":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_raw32g"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_raw32g"))
         elif rnd_choice < 0.66:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_raw32g"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_raw32g"))
         else:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_raw32g"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_raw32g"))
 
     elif Config.FEATURES_FILENAME == "12g90g270g_BX":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
         elif rnd_choice < 0.66:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
         else:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
 
     elif Config.FEATURES_FILENAME == "12g90g270g_FA":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_FA"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_FA"))
         elif rnd_choice < 0.66:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_FA"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_FA"))
         else:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_FA"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_FA"))
 
     elif Config.FEATURES_FILENAME == "12g90g270g_CSD_BX":
         rnd_choice_1 = np.random.random()
         rnd_choice_2 = np.random.random()
         if rnd_choice_1 < 0.5:  # CSD
             if rnd_choice_2 < 0.33:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
             elif rnd_choice_2 < 0.66:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
             else:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
         else:  # BX
             if rnd_choice_2 < 0.33:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
             elif rnd_choice_2 < 0.66:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
             else:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
             # Flip x axis to make BedpostX compatible with mrtrix CSD
             data[:, :, :, 0] *= -1
             data[:, :, :, 3] *= -1
@@ -123,16 +124,16 @@ def load_training_data(Config, subject):
         rnd_choice_2 = np.random.random()
         if rnd_choice_1 < 0.5:  # CSD
             if rnd_choice_2 < 0.33:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
             elif rnd_choice_2 < 0.66:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
             else:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_peaks"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_peaks"))
         else:  # BX
             if rnd_choice_2 < 0.5:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
             else:
-                data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled"))
+                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled"))
             # Flip x axis to make BedpostX compatible with mrtrix CSD
             data[:, :, :, 0] *= -1
             data[:, :, :, 3] *= -1
@@ -141,9 +142,9 @@ def load_training_data(Config, subject):
     elif Config.FEATURES_FILENAME == "105g_CSD_BX":
         rnd_choice_1 = np.random.random()
         if rnd_choice_1 < 0.5:  # CSD
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_peaks"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_peaks"))
         else:  # BX
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_bedpostx_peaks_scaled"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_bedpostx_peaks_scaled"))
             # Flip x axis to make BedpostX compatible with mrtrix CSD
             data[:, :, :, 0] *= -1
             data[:, :, :, 3] *= -1
@@ -151,43 +152,43 @@ def load_training_data(Config, subject):
 
     elif Config.FEATURES_FILENAME == "32g270g_BX":
         rnd_choice = np.random.random()
-        path_32g = join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled")
+        path_32g = join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled")
         if rnd_choice < 0.5:
             data = load(path_32g)
             rnd_choice_2 = np.random.random()
             if rnd_choice_2 < 0.5:
                 data[:, :, :, 6:9] = 0  # set third peak to 0
         else:
-            data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
 
     elif Config.FEATURES_FILENAME == "T1_Peaks270g":
-        peaks = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-        t1 = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
+        peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+        t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
         data = np.concatenate((peaks, t1), axis=3)
 
     elif Config.FEATURES_FILENAME == "T1_Peaks12g90g270g":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
-            peaks = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
         elif rnd_choice < 0.66:
-            peaks = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
         else:
-            peaks = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
-        t1 = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
+            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+        t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
         data = np.concatenate((peaks, t1), axis=3)
 
     else:
-        data = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, Config.FEATURES_FILENAME))
+        data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.FEATURES_FILENAME))
 
     if "|" in Config.LABELS_FILENAME:
         parts = Config.LABELS_FILENAME.split("|")
         seg = []  # [4, x, y, z, 54]
         for part in parts:
-            seg.append(load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, part)))
+            seg.append(load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, part)))
         seg = np.array(seg).transpose(1, 2, 3, 4, 0)
         seg = seg.reshape(data.shape[:3] + (-1,))  # [x, y, z, 54*4]
     else:
-        seg = load(join(C.DATA_PATH, Config.DATASET_FOLDER, subject, Config.LABELS_FILENAME))
+        seg = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.LABELS_FILENAME))
 
     return data, seg
 
@@ -206,15 +207,16 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         super(self.__class__, self).__init__(*args, **kwargs)
         self.Config = None
 
-    def _zoom_x_and_y(self, x, y, zoom_factor):
-        # Very slow
-        x_new = []
-        y_new = []
-        for b in range(x.shape[0]):
-            x_tmp, y_tmp = augment_zoom(x[b], y[b], zoom_factor, order=3, order_seg=1, cval_seg=0)
-            x_new.append(x_tmp)
-            y_new.append(y_tmp)
-        return np.array(x_new), np.array(y_new)
+    # If want to convert e.g. 1.25mm (HCP) image to 2mm image (bb)
+    # def _zoom_x_and_y(self, x, y, zoom_factor):
+    #     # Very slow
+    #     x_new = []
+    #     y_new = []
+    #     for b in range(x.shape[0]):
+    #         x_tmp, y_tmp = augment_zoom(x[b], y[b], zoom_factor, order=3, order_seg=1, cval_seg=0)
+    #         x_new.append(x_tmp)
+    #         y_new.append(y_tmp)
+    #     return np.array(x_new), np.array(y_new)
 
     def generate_train_batch(self):
 
@@ -227,7 +229,7 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         if self.Config.NR_OF_GRADIENTS == 18*self.Config.NR_SLICES:
             data = peak_utils.peaks_to_tensors(data)
 
-        slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION)
+        slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION) # if xyz, randomly choose one (1/3 per direction)
         if data.shape[slice_direction] <= self.batch_size:
             print("INFO: Batch size bigger than nr of slices. Therefore sampling with replacement.")
             slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, True, None)
@@ -274,53 +276,10 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         return data_dict
 
 
-class BatchGenerator2D_Npy_random(SlimDataLoaderBase):
-    """
-    Takes image ID provided via self._data, loads the Npy (numpy array) image and randomly samples 2D slices from it.
-    Needed for fusion training.
-
-    Timing:
-    About 2s per 54-batch 45 bundles 1.25mm.
-    """
-    def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
-        self.Config = None
-
-    def generate_train_batch(self):
-
-        subjects = self._data[0]
-        subject_idx = int(random.uniform(0, len(subjects)))
-
-        if self.Config.TYPE == "combined":
-            if np.random.random() < 0.5:
-                data = np.load(join(C.DATA_PATH, "HCP_fusion_npy_270g_125mm",
-                                    subjects[subject_idx], "270g_125mm_xyz.npy"), mmap_mode="r")
-            else:
-                data = np.load(join(C.DATA_PATH, "HCP_fusion_npy_32g_25mm",
-                                    subjects[subject_idx], "32g_25mm_xyz.npy"), mmap_mode="r")
-            data = np.reshape(data, (data.shape[0], data.shape[1], data.shape[2], data.shape[3] * data.shape[4]))
-            seg = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
-                               self.Config.LABELS_FILENAME + ".npy"), mmap_mode="r")
-        else:
-            data = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
-                                self.Config.FEATURES_FILENAME + ".npy"), mmap_mode="r")
-            seg = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
-                               self.Config.LABELS_FILENAME + ".npy"), mmap_mode="r")
-
-        data = np.nan_to_num(data)
-        seg = np.nan_to_num(seg)
-
-        slice_idxs = np.random.choice(data.shape[0], self.batch_size, False, None)
-        slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION)
-        x, y = data_utils.sample_slices(data, seg, slice_idxs,
-                                        slice_direction=slice_direction,
-                                        labels_type=self.Config.LABELS_TYPE)
-
-        data_dict = {"data": x,  # (batch_size, channels, x, y, [z])
-                     "seg": y}  # (batch_size, channels, x, y, [z])
-        return data_dict
 
 
+
+# main class
 class DataLoaderTraining:
 
     def __init__(self, Config):
@@ -330,7 +289,7 @@ class DataLoaderTraining:
 
         if self.Config.DATA_AUGMENTATION:
             num_processes = 15  # 15 is a bit faster than 8 on cluster
-            # num_processes = multiprocessing.cpu_count()  # on cluster: gives all cores, not only assigned cores
+            #num_processes = multiprocessing.cpu_count()  # on cluster: gives all cores, not only assigned cores
         else:
             num_processes = 6
 
@@ -407,7 +366,9 @@ class DataLoaderTraining:
 
                 if self.Config.DAUG_FLIP_PEAKS:
                     tfs.append(FlipVectorAxisTransform())
-
+            
+            # if self.Config.RESIZE_TO_512:
+            #     tfs.append(ResizeTransform(target_size=512, order=3, order_seg=0))
         tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
 
         #num_cached_per_queue 1 or 2 does not really make a difference
@@ -417,17 +378,18 @@ class DataLoaderTraining:
 
 
     def get_batch_generator(self, batch_size=128, type=None, subjects=None):
-        data = subjects
+        data = subjects # A list containing subject names 
         seg = []
 
         if self.Config.TYPE == "combined":
             batch_gen = BatchGenerator2D_Npy_random((data, seg), batch_size=batch_size)
-        else:
+        else: # single_direction
             batch_gen = BatchGenerator2D_Nifti_random((data, seg), batch_size=batch_size)
             # batch_gen = SlicesBatchGeneratorRandomNiftiImg_5slices((data, seg), batch_size=batch_size)
 
-        batch_gen.Config = self.Config
+        batch_gen.Config = self.Config # why?? 
 
         batch_gen = self._augment_data(batch_gen, type=type)
 
         return batch_gen
+

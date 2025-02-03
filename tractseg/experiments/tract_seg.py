@@ -1,6 +1,6 @@
 
 from tractseg.experiments.base import Config as BaseConfig
-
+# Load config from base.py
 
 class Config(BaseConfig):
 

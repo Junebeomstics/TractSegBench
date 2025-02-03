@@ -10,24 +10,26 @@ import torch.nn as nn
 
 def save_checkpoint(path, **kwargs):
     for key, value in list(kwargs.items()):
-        if isinstance(value, torch.nn.Module) or isinstance(value, torch.optim.Optimizer):
+        if key== 'unet' or key == 'optimizer' or key == 'scheduler':
             kwargs[key] = value.state_dict()
-
+        else:
+            kwargs[key] = value
     torch.save(kwargs, path)
 
 
 def load_checkpoint(path, **kwargs):
     checkpoint = torch.load(path, map_location=lambda storage, loc: storage)
-
     for key, value in list(kwargs.items()):
         if key in checkpoint:
-            if isinstance(value, torch.nn.Module) or isinstance(value, torch.optim.Optimizer):
+            if key in ['unet', 'optimizer','scheduler']:
+                print('using pre-trained weights for {}'.format(key))
                 value.load_state_dict(checkpoint[key])
-            else:
-                kwargs[key] = checkpoint[key]
-
+                
+            elif key == 'epoch':
+                print('using pre-trained values for {}'.format(key))
+                value = checkpoint[key] + 1
+        kwargs[key] = value
     return kwargs
-
 
 def load_checkpoint_selectively(path, **kwargs):
     checkpoint = torch.load(path, map_location=lambda storage, loc: storage)

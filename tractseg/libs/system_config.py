@@ -71,14 +71,14 @@ def get_config_file():
 
 
 class SystemConfig:
-    TRACT_SEG_HOME = os.path.join(os.path.expanduser('~'), '.tractseg')
+    TRACT_SEG_HOME=os.path.join('/global/cfs/projectdirs/m4673/junbeom/TractSegVis/TractSeg','.tractseg') #os.path.join(os.path.expanduser('~'), '.tractseg')
 
     paths = get_config_file()
 
     if "working_dir" in paths:  # check if config file
         HOME = paths["working_dir"]
     else:  # fallback
-        HOME = join(expanduser("~/TractSeg"))
+        HOME = '/global/cfs/projectdirs/m4673/junbeom/TractSegVis/TractSeg' #join(expanduser("~/TractSeg"))
 
     if "network_dir" in paths:
         NETWORK_DRIVE = paths["network_dir"]

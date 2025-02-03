@@ -4,9 +4,10 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import os
 
 from tractseg.libs import img_utils
-from tractseg.data.subjects import get_all_subjects
+from tractseg.data.subjects import get_all_subjects # all HCP subjects names list are returned
 from tractseg.libs import utils
 
 
@@ -25,144 +26,144 @@ def get_bundle_names(CLASSES):
                    'ST_PREF_right', 'ST_PREM_left', 'ST_PREM_right', 'ST_PREC_left', 'ST_PREC_right', 'ST_POSTC_left',
                    'ST_POSTC_right', 'ST_PAR_left', 'ST_PAR_right', 'ST_OCC_left', 'ST_OCC_right']
 
-    elif CLASSES == "All_tractometry":
-        # 50 Tracts
-        bundles = ['AF_left', 'AF_right', 'ATR_left', 'ATR_right', 'CC_1', 'CC_2', 'CC_3', 'CC_4', 'CC_5', 'CC_6',
-                   'CC_7', 'CG_left', 'CG_right', 'CST_left', 'CST_right', 'FPT_left',
-                   'FPT_right', 'ICP_left', 'ICP_right', 'IFO_left', 'IFO_right', 'ILF_left',
-                   'ILF_right', 'MCP', 'OR_left', 'OR_right', 'POPT_left', 'POPT_right', 'SCP_left', 'SCP_right',
-                   'SLF_I_left', 'SLF_I_right', 'SLF_II_left', 'SLF_II_right', 'SLF_III_left', 'SLF_III_right',
-                   'STR_left', 'STR_right', 'UF_left', 'UF_right', 'T_PREM_left', 'T_PREM_right', 'T_PAR_left',
-                   'T_PAR_right', 'T_OCC_left', 'T_OCC_right', 'ST_FO_left', 'ST_FO_right', 'ST_PREM_left',
-                   'ST_PREM_right']
+    # elif CLASSES == "All_tractometry":
+    #     # 50 Tracts
+    #     bundles = ['AF_left', 'AF_right', 'ATR_left', 'ATR_right', 'CC_1', 'CC_2', 'CC_3', 'CC_4', 'CC_5', 'CC_6',
+    #                'CC_7', 'CG_left', 'CG_right', 'CST_left', 'CST_right', 'FPT_left',
+    #                'FPT_right', 'ICP_left', 'ICP_right', 'IFO_left', 'IFO_right', 'ILF_left',
+    #                'ILF_right', 'MCP', 'OR_left', 'OR_right', 'POPT_left', 'POPT_right', 'SCP_left', 'SCP_right',
+    #                'SLF_I_left', 'SLF_I_right', 'SLF_II_left', 'SLF_II_right', 'SLF_III_left', 'SLF_III_right',
+    #                'STR_left', 'STR_right', 'UF_left', 'UF_right', 'T_PREM_left', 'T_PREM_right', 'T_PAR_left',
+    #                'T_PAR_right', 'T_OCC_left', 'T_OCC_right', 'ST_FO_left', 'ST_FO_right', 'ST_PREM_left',
+    #                'ST_PREM_right']
 
-    elif CLASSES == "All_Part1":
-        # 18 Tracts
-        bundles = ['AF_left', 'AF_right', 'ATR_left', 'ATR_right', 'CA', 'CC_1', 'CC_2', 'CC_3', 'CC_4', 'CC_5', 'CC_6',
-                   'CC_7', 'CG_left', 'CG_right', 'CST_left', 'CST_right', 'MLF_left', 'MLF_right']
-    elif CLASSES == "All_Part2":
-        # 18 Tracts
-        bundles = ['FPT_left', 'FPT_right', 'FX_left', 'FX_right', 'ICP_left', 'ICP_right', 'IFO_left', 'IFO_right',
-                   'ILF_left', 'ILF_right', 'MCP', 'OR_left', 'OR_right', 'POPT_left', 'POPT_right', 'SCP_left',
-                   'SCP_right', 'SLF_I_left']
-    elif CLASSES == "All_Part3":
-        # 18 Tracts
-        bundles = ['SLF_I_right', 'SLF_II_left', 'SLF_II_right', 'SLF_III_left', 'SLF_III_right', 'STR_left',
-                   'STR_right', 'UF_left', 'UF_right', 'CC', 'T_PREF_left', 'T_PREF_right', 'T_PREM_left',
-                   'T_PREM_right', 'T_PREC_left', 'T_PREC_right', 'T_POSTC_left', 'T_POSTC_right']
-    elif CLASSES == "All_Part4":
-        # 18 Tracts
-        bundles = ['T_PAR_left', 'T_PAR_right', 'T_OCC_left', 'T_OCC_right', 'ST_FO_left', 'ST_FO_right',
-                   'ST_PREF_left', 'ST_PREF_right', 'ST_PREM_left', 'ST_PREM_right', 'ST_PREC_left', 'ST_PREC_right',
-                   'ST_POSTC_left', 'ST_POSTC_right', 'ST_PAR_left', 'ST_PAR_right', 'ST_OCC_left', 'ST_OCC_right']
+    # elif CLASSES == "All_Part1":
+    #     # 18 Tracts
+    #     bundles = ['AF_left', 'AF_right', 'ATR_left', 'ATR_right', 'CA', 'CC_1', 'CC_2', 'CC_3', 'CC_4', 'CC_5', 'CC_6',
+    #                'CC_7', 'CG_left', 'CG_right', 'CST_left', 'CST_right', 'MLF_left', 'MLF_right']
+    # elif CLASSES == "All_Part2":
+    #     # 18 Tracts
+    #     bundles = ['FPT_left', 'FPT_right', 'FX_left', 'FX_right', 'ICP_left', 'ICP_right', 'IFO_left', 'IFO_right',
+    #                'ILF_left', 'ILF_right', 'MCP', 'OR_left', 'OR_right', 'POPT_left', 'POPT_right', 'SCP_left',
+    #                'SCP_right', 'SLF_I_left']
+    # elif CLASSES == "All_Part3":
+    #     # 18 Tracts
+    #     bundles = ['SLF_I_right', 'SLF_II_left', 'SLF_II_right', 'SLF_III_left', 'SLF_III_right', 'STR_left',
+    #                'STR_right', 'UF_left', 'UF_right', 'CC', 'T_PREF_left', 'T_PREF_right', 'T_PREM_left',
+    #                'T_PREM_right', 'T_PREC_left', 'T_PREC_right', 'T_POSTC_left', 'T_POSTC_right']
+    # elif CLASSES == "All_Part4":
+    #     # 18 Tracts
+    #     bundles = ['T_PAR_left', 'T_PAR_right', 'T_OCC_left', 'T_OCC_right', 'ST_FO_left', 'ST_FO_right',
+    #                'ST_PREF_left', 'ST_PREF_right', 'ST_PREM_left', 'ST_PREM_right', 'ST_PREC_left', 'ST_PREC_right',
+    #                'ST_POSTC_left', 'ST_POSTC_right', 'ST_PAR_left', 'ST_PAR_right', 'ST_OCC_left', 'ST_OCC_right']
 
-    elif CLASSES == "11":
-        # 11 Major tracts
-        bundles = ["CST_left", "CST_right", "IFO_left", "IFO_right", "CA", "CG_left", "CG_right",
-                   "FX_left", "FX_right", "UF_left", "UF_right"]
+    # elif CLASSES == "11":
+    #     # 11 Major tracts
+    #     bundles = ["CST_left", "CST_right", "IFO_left", "IFO_right", "CA", "CG_left", "CG_right",
+    #                "FX_left", "FX_right", "UF_left", "UF_right"]
 
-    elif CLASSES == "20":
-        # 20 Major tracts
-        bundles = ["AF_left", "AF_right", "CA", "CST_left", "CST_right", "CG_left", "CG_right",
-                   "ICP_left", "ICP_right", "MCP", "SCP_left", "SCP_right", "ILF_left", "ILF_right",
-                   "IFO_left", "IFO_right", "OR_left", "OR_right", "UF_left", "UF_right"]
+    # elif CLASSES == "20":
+    #     # 20 Major tracts
+    #     bundles = ["AF_left", "AF_right", "CA", "CST_left", "CST_right", "CG_left", "CG_right",
+    #                "ICP_left", "ICP_right", "MCP", "SCP_left", "SCP_right", "ILF_left", "ILF_right",
+    #                "IFO_left", "IFO_right", "OR_left", "OR_right", "UF_left", "UF_right"]
 
-    elif CLASSES == "20_endpoints_combined":
-        # endpoints for "20"; beginnings and endings combined
-        bundles = ["AF_left", "AF_right", "CA", "CST_left", "CST_right", "CG_left", "CG_right",
-                   "ICP_left", "ICP_right", "MCP", "SCP_left", "SCP_right", "ILF_left", "ILF_right",
-                   "IFO_left", "IFO_right", "OR_left", "OR_right", "UF_left", "UF_right"]
+    # elif CLASSES == "20_endpoints_combined":
+    #     # endpoints for "20"; beginnings and endings combined
+    #     bundles = ["AF_left", "AF_right", "CA", "CST_left", "CST_right", "CG_left", "CG_right",
+    #                "ICP_left", "ICP_right", "MCP", "SCP_left", "SCP_right", "ILF_left", "ILF_right",
+    #                "IFO_left", "IFO_right", "OR_left", "OR_right", "UF_left", "UF_right"]
 
-    elif CLASSES == "20_endpoints":
-        #endpoints for "20"
-        bundles = ['AF_left_b', 'AF_left_e', 'AF_right_b', 'AF_right_e', 'CA_b', 'CA_e',
-                     'CST_left_b', 'CST_left_e', 'CST_right_b', 'CST_right_e', 'CG_left_b',
-                     'CG_left_e', 'CG_right_b', 'CG_right_e', 'ICP_left_b', 'ICP_left_e',
-                     'ICP_right_b', 'ICP_right_e', 'MCP_b', 'MCP_e', 'SCP_left_b', 'SCP_left_e',
-                     'SCP_right_b', 'SCP_right_e', 'ILF_left_b', 'ILF_left_e', 'ILF_right_b',
-                     'ILF_right_e', 'IFO_left_b', 'IFO_left_e', 'IFO_right_b', 'IFO_right_e',
-                     'OR_left_b', 'OR_left_e', 'OR_right_b', 'OR_right_e', 'UF_left_b', 'UF_left_e',
-                     'UF_right_b', 'UF_right_e'] #40
+    # elif CLASSES == "20_endpoints":
+    #     #endpoints for "20"
+    #     bundles = ['AF_left_b', 'AF_left_e', 'AF_right_b', 'AF_right_e', 'CA_b', 'CA_e',
+    #                  'CST_left_b', 'CST_left_e', 'CST_right_b', 'CST_right_e', 'CG_left_b',
+    #                  'CG_left_e', 'CG_right_b', 'CG_right_e', 'ICP_left_b', 'ICP_left_e',
+    #                  'ICP_right_b', 'ICP_right_e', 'MCP_b', 'MCP_e', 'SCP_left_b', 'SCP_left_e',
+    #                  'SCP_right_b', 'SCP_right_e', 'ILF_left_b', 'ILF_left_e', 'ILF_right_b',
+    #                  'ILF_right_e', 'IFO_left_b', 'IFO_left_e', 'IFO_right_b', 'IFO_right_e',
+    #                  'OR_left_b', 'OR_left_e', 'OR_right_b', 'OR_right_e', 'UF_left_b', 'UF_left_e',
+    #                  'UF_right_b', 'UF_right_e'] #40
 
-    elif CLASSES == "20_bundles_endpoints":
-        #endpoints for "20"
-        bundles = ['AF_left', 'AF_left_b', 'AF_left_e', 'AF_right', 'AF_right_b', 'AF_right_e',
-                   'CA', 'CA_b', 'CA_e', 'CST_left', 'CST_left_b', 'CST_left_e', 'CST_right', 'CST_right_b', 'CST_right_e',
-                   'CG_left', 'CG_left_b', 'CG_left_e', 'CG_right', 'CG_right_b', 'CG_right_e',
-                   'ICP_left', 'ICP_left_b', 'ICP_left_e', 'ICP_right', 'ICP_right_b', 'ICP_right_e',
-                   'MCP', 'MCP_b', 'MCP_e', 'SCP_left', 'SCP_left_b', 'SCP_left_e',
-                   'SCP_right', 'SCP_right_b', 'SCP_right_e', 'ILF_left', 'ILF_left_b', 'ILF_left_e',
-                   'ILF_right', 'ILF_right_b', 'ILF_right_e', 'IFO_left', 'IFO_left_b', 'IFO_left_e',
-                   'IFO_right', 'IFO_right_b', 'IFO_right_e',
-                   'OR_left', 'OR_left_b', 'OR_left_e', 'OR_right', 'OR_right_b', 'OR_right_e',
-                   'UF_left', 'UF_left_b', 'UF_left_e', 'UF_right', 'UF_right_b', 'UF_right_e'] #60
+    # elif CLASSES == "20_bundles_endpoints":
+    #     #endpoints for "20"
+    #     bundles = ['AF_left', 'AF_left_b', 'AF_left_e', 'AF_right', 'AF_right_b', 'AF_right_e',
+    #                'CA', 'CA_b', 'CA_e', 'CST_left', 'CST_left_b', 'CST_left_e', 'CST_right', 'CST_right_b', 'CST_right_e',
+    #                'CG_left', 'CG_left_b', 'CG_left_e', 'CG_right', 'CG_right_b', 'CG_right_e',
+    #                'ICP_left', 'ICP_left_b', 'ICP_left_e', 'ICP_right', 'ICP_right_b', 'ICP_right_e',
+    #                'MCP', 'MCP_b', 'MCP_e', 'SCP_left', 'SCP_left_b', 'SCP_left_e',
+    #                'SCP_right', 'SCP_right_b', 'SCP_right_e', 'ILF_left', 'ILF_left_b', 'ILF_left_e',
+    #                'ILF_right', 'ILF_right_b', 'ILF_right_e', 'IFO_left', 'IFO_left_b', 'IFO_left_e',
+    #                'IFO_right', 'IFO_right_b', 'IFO_right_e',
+    #                'OR_left', 'OR_left_b', 'OR_left_e', 'OR_right', 'OR_right_b', 'OR_right_e',
+    #                'UF_left', 'UF_left_b', 'UF_left_e', 'UF_right', 'UF_right_b', 'UF_right_e'] #60
 
-    elif CLASSES == "All_endpoints":
-        #endpoints for "All"
-        bundles = ['AF_left_b', 'AF_left_e', 'AF_right_b', 'AF_right_e', 'ATR_left_b', 'ATR_left_e', 'ATR_right_b',
-         'ATR_right_e', 'CA_b', 'CA_e', 'CC_1_b', 'CC_1_e', 'CC_2_b', 'CC_2_e', 'CC_3_b', 'CC_3_e', 'CC_4_b',
-         'CC_4_e', 'CC_5_b', 'CC_5_e', 'CC_6_b', 'CC_6_e', 'CC_7_b', 'CC_7_e', 'CG_left_b', 'CG_left_e',
-         'CG_right_b', 'CG_right_e', 'CST_left_b', 'CST_left_e', 'CST_right_b', 'CST_right_e', 'MLF_left_b',
-         'MLF_left_e', 'MLF_right_b', 'MLF_right_e', 'FPT_left_b', 'FPT_left_e', 'FPT_right_b', 'FPT_right_e',
-         'FX_left_b', 'FX_left_e', 'FX_right_b', 'FX_right_e', 'ICP_left_b', 'ICP_left_e', 'ICP_right_b',
-         'ICP_right_e', 'IFO_left_b', 'IFO_left_e', 'IFO_right_b', 'IFO_right_e', 'ILF_left_b', 'ILF_left_e',
-         'ILF_right_b', 'ILF_right_e', 'MCP_b', 'MCP_e', 'OR_left_b', 'OR_left_e', 'OR_right_b', 'OR_right_e',
-         'POPT_left_b', 'POPT_left_e', 'POPT_right_b', 'POPT_right_e', 'SCP_left_b', 'SCP_left_e', 'SCP_right_b',
-         'SCP_right_e', 'SLF_I_left_b', 'SLF_I_left_e', 'SLF_I_right_b', 'SLF_I_right_e', 'SLF_II_left_b',
-         'SLF_II_left_e', 'SLF_II_right_b', 'SLF_II_right_e', 'SLF_III_left_b', 'SLF_III_left_e', 'SLF_III_right_b',
-         'SLF_III_right_e', 'STR_left_b', 'STR_left_e', 'STR_right_b', 'STR_right_e', 'UF_left_b', 'UF_left_e',
-         'UF_right_b', 'UF_right_e', 'CC_b', 'CC_e', 'T_PREF_left_b', 'T_PREF_left_e', 'T_PREF_right_b',
-         'T_PREF_right_e', 'T_PREM_left_b', 'T_PREM_left_e', 'T_PREM_right_b', 'T_PREM_right_e', 'T_PREC_left_b',
-         'T_PREC_left_e', 'T_PREC_right_b', 'T_PREC_right_e', 'T_POSTC_left_b', 'T_POSTC_left_e', 'T_POSTC_right_b',
-         'T_POSTC_right_e', 'T_PAR_left_b', 'T_PAR_left_e', 'T_PAR_right_b', 'T_PAR_right_e', 'T_OCC_left_b',
-         'T_OCC_left_e', 'T_OCC_right_b', 'T_OCC_right_e', 'ST_FO_left_b', 'ST_FO_left_e', 'ST_FO_right_b',
-         'ST_FO_right_e', 'ST_PREF_left_b', 'ST_PREF_left_e', 'ST_PREF_right_b', 'ST_PREF_right_e',
-         'ST_PREM_left_b', 'ST_PREM_left_e', 'ST_PREM_right_b', 'ST_PREM_right_e', 'ST_PREC_left_b',
-         'ST_PREC_left_e', 'ST_PREC_right_b', 'ST_PREC_right_e', 'ST_POSTC_left_b', 'ST_POSTC_left_e',
-         'ST_POSTC_right_b', 'ST_POSTC_right_e', 'ST_PAR_left_b', 'ST_PAR_left_e', 'ST_PAR_right_b',
-         'ST_PAR_right_e', 'ST_OCC_left_b', 'ST_OCC_left_e', 'ST_OCC_right_b', 'ST_OCC_right_e'] #144
+    # elif CLASSES == "All_endpoints":
+    #     #endpoints for "All"
+    #     bundles = ['AF_left_b', 'AF_left_e', 'AF_right_b', 'AF_right_e', 'ATR_left_b', 'ATR_left_e', 'ATR_right_b',
+    #      'ATR_right_e', 'CA_b', 'CA_e', 'CC_1_b', 'CC_1_e', 'CC_2_b', 'CC_2_e', 'CC_3_b', 'CC_3_e', 'CC_4_b',
+    #      'CC_4_e', 'CC_5_b', 'CC_5_e', 'CC_6_b', 'CC_6_e', 'CC_7_b', 'CC_7_e', 'CG_left_b', 'CG_left_e',
+    #      'CG_right_b', 'CG_right_e', 'CST_left_b', 'CST_left_e', 'CST_right_b', 'CST_right_e', 'MLF_left_b',
+    #      'MLF_left_e', 'MLF_right_b', 'MLF_right_e', 'FPT_left_b', 'FPT_left_e', 'FPT_right_b', 'FPT_right_e',
+    #      'FX_left_b', 'FX_left_e', 'FX_right_b', 'FX_right_e', 'ICP_left_b', 'ICP_left_e', 'ICP_right_b',
+    #      'ICP_right_e', 'IFO_left_b', 'IFO_left_e', 'IFO_right_b', 'IFO_right_e', 'ILF_left_b', 'ILF_left_e',
+    #      'ILF_right_b', 'ILF_right_e', 'MCP_b', 'MCP_e', 'OR_left_b', 'OR_left_e', 'OR_right_b', 'OR_right_e',
+    #      'POPT_left_b', 'POPT_left_e', 'POPT_right_b', 'POPT_right_e', 'SCP_left_b', 'SCP_left_e', 'SCP_right_b',
+    #      'SCP_right_e', 'SLF_I_left_b', 'SLF_I_left_e', 'SLF_I_right_b', 'SLF_I_right_e', 'SLF_II_left_b',
+    #      'SLF_II_left_e', 'SLF_II_right_b', 'SLF_II_right_e', 'SLF_III_left_b', 'SLF_III_left_e', 'SLF_III_right_b',
+    #      'SLF_III_right_e', 'STR_left_b', 'STR_left_e', 'STR_right_b', 'STR_right_e', 'UF_left_b', 'UF_left_e',
+    #      'UF_right_b', 'UF_right_e', 'CC_b', 'CC_e', 'T_PREF_left_b', 'T_PREF_left_e', 'T_PREF_right_b',
+    #      'T_PREF_right_e', 'T_PREM_left_b', 'T_PREM_left_e', 'T_PREM_right_b', 'T_PREM_right_e', 'T_PREC_left_b',
+    #      'T_PREC_left_e', 'T_PREC_right_b', 'T_PREC_right_e', 'T_POSTC_left_b', 'T_POSTC_left_e', 'T_POSTC_right_b',
+    #      'T_POSTC_right_e', 'T_PAR_left_b', 'T_PAR_left_e', 'T_PAR_right_b', 'T_PAR_right_e', 'T_OCC_left_b',
+    #      'T_OCC_left_e', 'T_OCC_right_b', 'T_OCC_right_e', 'ST_FO_left_b', 'ST_FO_left_e', 'ST_FO_right_b',
+    #      'ST_FO_right_e', 'ST_PREF_left_b', 'ST_PREF_left_e', 'ST_PREF_right_b', 'ST_PREF_right_e',
+    #      'ST_PREM_left_b', 'ST_PREM_left_e', 'ST_PREM_right_b', 'ST_PREM_right_e', 'ST_PREC_left_b',
+    #      'ST_PREC_left_e', 'ST_PREC_right_b', 'ST_PREC_right_e', 'ST_POSTC_left_b', 'ST_POSTC_left_e',
+    #      'ST_POSTC_right_b', 'ST_POSTC_right_e', 'ST_PAR_left_b', 'ST_PAR_left_e', 'ST_PAR_right_b',
+    #      'ST_PAR_right_e', 'ST_OCC_left_b', 'ST_OCC_left_e', 'ST_OCC_right_b', 'ST_OCC_right_e'] #144
 
-    elif CLASSES == "AutoPTX":
-        bundles = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l",
-                   "cbt_r", "cing_l", "cing_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r",
-                   "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "MG_ac", "MG_unc_l", "MG_unc_r",
-                   "or_l", "or_r", "slf1_l_kattest2_symm", "slf1_r_kattest2_symm", "slf2_l_kattest2_symm",
-                   "slf2_r_kattest2_symm", "slf3_l_kattest2_symm", "slf3_r_kattest2_symm", "str_l", "str_r",
-                   "unc_l", "unc_r"]
+    # elif CLASSES == "AutoPTX":
+    #     bundles = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l",
+    #                "cbt_r", "cing_l", "cing_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r",
+    #                "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "MG_ac", "MG_unc_l", "MG_unc_r",
+    #                "or_l", "or_r", "slf1_l_kattest2_symm", "slf1_r_kattest2_symm", "slf2_l_kattest2_symm",
+    #                "slf2_r_kattest2_symm", "slf3_l_kattest2_symm", "slf3_r_kattest2_symm", "str_l", "str_r",
+    #                "unc_l", "unc_r"]
 
-    elif CLASSES == "AutoPTX_42":
-        bundles = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l",
-                   "cbt_r", "cing_l", "cing_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r",
-                   "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "MG_ac", "MG_unc_l", "MG_unc_r",
-                   "or_l", "or_r", "slf1_l_kattest2_symm", "slf1_r_kattest2_symm", "slf2_l_kattest2_symm",
-                   "slf2_r_kattest2_symm", "slf3_l_kattest2_symm", "slf3_r_kattest2_symm", "str_l", "str_r"]
+    # elif CLASSES == "AutoPTX_42":
+    #     bundles = ["af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r", "cbt_l",
+    #                "cbt_r", "cing_l", "cing_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r",
+    #                "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "MG_ac", "MG_unc_l", "MG_unc_r",
+    #                "or_l", "or_r", "slf1_l_kattest2_symm", "slf1_r_kattest2_symm", "slf2_l_kattest2_symm",
+    #                "slf2_r_kattest2_symm", "slf3_l_kattest2_symm", "slf3_r_kattest2_symm", "str_l", "str_r"]
 
-    elif CLASSES == "AutoPTX_27":
-        bundles = ["ar_l", "ar_r", "atr_l", "atr_r", "cgc_l", "cgc_r", "cgh_l", "cgh_r", "cst_l", "cst_r", "fma",
-                   "fmi", "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "ml_l", "ml_r", "ptr_l", "ptr_r", "slf_l",
-                   "slf_r", "str_l", "str_r", "unc_l", "unc_r"]  # 27
+    # elif CLASSES == "AutoPTX_27":
+    #     bundles = ["ar_l", "ar_r", "atr_l", "atr_r", "cgc_l", "cgc_r", "cgh_l", "cgh_r", "cst_l", "cst_r", "fma",
+    #                "fmi", "ifo_l", "ifo_r", "ilf_l", "ilf_r", "mcp", "ml_l", "ml_r", "ptr_l", "ptr_r", "slf_l",
+    #                "slf_r", "str_l", "str_r", "unc_l", "unc_r"]  # 27
 
-    elif CLASSES == "xtract":
-        bundles = ["ac", "af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r",
-                   "cbt_l", "cbt_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r", "ifo_l",
-                   "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r", "slf1_l", "slf1_r",
-                   "slf2_l", "slf2_r", "slf3_l", "slf3_r", "str_l", "str_r", "uf_l", "uf_r", "vof_l",
-                   "vof_r"]  # 42
+    # elif CLASSES == "xtract":
+    #     bundles = ["ac", "af_l", "af_r", "ar_l", "ar_r", "atr_l", "atr_r", "cbd_l", "cbd_r", "cbp_l", "cbp_r",
+    #                "cbt_l", "cbt_r", "cst_l", "cst_r", "fa_l", "fa_r", "fma", "fmi", "fx_l", "fx_r", "ifo_l",
+    #                "ifo_r", "ilf_l", "ilf_r", "mcp", "mdlf_l", "mdlf_r", "or_l", "or_r", "slf1_l", "slf1_r",
+    #                "slf2_l", "slf2_r", "slf3_l", "slf3_r", "str_l", "str_r", "uf_l", "uf_r", "vof_l",
+    #                "vof_r"]  # 42
 
-    elif CLASSES == "AutoPTX_CST":
-        bundles = ["cst_l", "cst_r"]
+    # elif CLASSES == "AutoPTX_CST":
+    #     bundles = ["cst_l", "cst_r"]
 
-    elif CLASSES == "test":
-        # Only use subset of classes for unit testing because of runtime
-        bundles = ["CST_right", "CA", "IFO_right"]
+    # elif CLASSES == "test":
+    #     # Only use subset of classes for unit testing because of runtime
+    #     bundles = ["CST_right", "CA", "IFO_right"]
 
-    elif CLASSES == "test_single":
-        # Only use subset of classes for unit testing because of runtime
-        bundles = ["CST_right"]
+    # elif CLASSES == "test_single":
+    #     # Only use subset of classes for unit testing because of runtime
+    #     bundles = ["CST_right"]
 
-    else:
-        #1 tract
-        bundles = [CLASSES]
+    # else:
+    #     #1 tract
+    #     bundles = [CLASSES]
 
     return ["BG"] + bundles  # Add Background label (is always beginning of list)
 
@@ -196,111 +197,111 @@ def get_labels_filename(Config):
         else:
             Config.LABELS_FILENAME = "bundle_peaks_808080"
 
-    elif Config.CLASSES == "11" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_11"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_11_808080"
+    # elif Config.CLASSES == "11" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_11"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_11_808080"
 
-    elif Config.CLASSES == "20" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_20"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_20_808080"
+    # elif Config.CLASSES == "20" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_20"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_20_808080"
 
-    elif Config.CLASSES == "All_Part1" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_Part1"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_Part1_808080"
+    # elif Config.CLASSES == "All_Part1" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part1"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part1_808080"
 
-    elif Config.CLASSES == "All_Part2" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_Part2"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_Part2_808080"
+    # elif Config.CLASSES == "All_Part2" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part2"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part2_808080"
 
-    elif Config.CLASSES == "All_Part3" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_Part3"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_Part3_808080"
+    # elif Config.CLASSES == "All_Part3" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part3"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part3_808080"
 
-    elif Config.CLASSES == "All_Part4" and Config.EXPERIMENT_TYPE == "peak_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_peaks_Part4"
-        else:
-            Config.LABELS_FILENAME = "bundle_peaks_Part5_808080"
+    # elif Config.CLASSES == "All_Part4" and Config.EXPERIMENT_TYPE == "peak_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part4"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_peaks_Part5_808080"
 
-    elif Config.CLASSES == "All_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "endpoints_72_ordered"
-        else:
-            Config.LABELS_FILENAME = "endpoints_72_ordered"
+    # elif Config.CLASSES == "All_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "endpoints_72_ordered"
+    #     else:
+    #         Config.LABELS_FILENAME = "endpoints_72_ordered"
 
-    elif Config.CLASSES == "20_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "endpoints_20_ordered"
-        else:
-            Config.LABELS_FILENAME = "endpoints_20_ordered"
+    # elif Config.CLASSES == "20_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "endpoints_20_ordered"
+    #     else:
+    #         Config.LABELS_FILENAME = "endpoints_20_ordered"
 
-    elif Config.CLASSES == "20_endpoints_combined" and Config.EXPERIMENT_TYPE == "endings_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "endpoints_20_combined"
-        else:
-            Config.LABELS_FILENAME = "endpoints_20_combined"
+    # elif Config.CLASSES == "20_endpoints_combined" and Config.EXPERIMENT_TYPE == "endings_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "endpoints_20_combined"
+    #     else:
+    #         Config.LABELS_FILENAME = "endpoints_20_combined"
 
-    elif Config.CLASSES == "20_bundles_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_endpoints_20"
-        else:
-            Config.LABELS_FILENAME = "bundle_endpoints_20"
+    # elif Config.CLASSES == "20_bundles_endpoints" and Config.EXPERIMENT_TYPE == "endings_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_endpoints_20"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_endpoints_20"
 
     elif Config.CLASSES == "All" and Config.EXPERIMENT_TYPE == "tract_segmentation":
         if Config.RESOLUTION == "1.25mm":
             Config.LABELS_FILENAME = "bundle_masks_72"
-        elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
-            Config.LABELS_FILENAME = "bundle_masks_72"
+        # elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
+        #     Config.LABELS_FILENAME = "bundle_masks_72"
         # else:
         #     Config.LABELS_FILENAME = "bundle_masks_72_808080"
         else:
             Config.LABELS_FILENAME = "bundle_masks_72"
 
-    elif (Config.CLASSES == "AutoPTX" or Config.CLASSES == "AutoPTX_42") and \
-            Config.EXPERIMENT_TYPE == "tract_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001"
-        elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001"
-        else:
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_808080"
+    # elif (Config.CLASSES == "AutoPTX" or Config.CLASSES == "AutoPTX_42") and \
+    #         Config.EXPERIMENT_TYPE == "tract_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001"
+    #     elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_808080"
 
-    elif Config.CLASSES == "AutoPTX_CST" and Config.EXPERIMENT_TYPE == "tract_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_CST"
-        elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_CST"
-        else:
-            Config.LABELS_FILENAME = "NOT_AVAILABLE"
+    # elif Config.CLASSES == "AutoPTX_CST" and Config.EXPERIMENT_TYPE == "tract_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_CST"
+    #     elif Config.RESOLUTION == "2mm" and Config.DATASET == "Schizo":
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_thr001_CST"
+    #     else:
+    #         Config.LABELS_FILENAME = "NOT_AVAILABLE"
 
-    elif Config.CLASSES == "20" and Config.EXPERIMENT_TYPE == "tract_segmentation":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_masks_20"
-        else:
-            Config.LABELS_FILENAME = "bundle_masks_20_808080"
+    # elif Config.CLASSES == "20" and Config.EXPERIMENT_TYPE == "tract_segmentation":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_masks_20"
+    #     else:
+    #         Config.LABELS_FILENAME = "bundle_masks_20_808080"
 
-    elif Config.CLASSES == "All" and Config.EXPERIMENT_TYPE == "dm_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_masks_dm"
-        else:
-            Config.LABELS_FILENAME = "NOT_AVAILABLE"
+    # elif Config.CLASSES == "All" and Config.EXPERIMENT_TYPE == "dm_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_masks_dm"
+    #     else:
+    #         Config.LABELS_FILENAME = "NOT_AVAILABLE"
 
-    elif (Config.CLASSES == "AutoPTX" or Config.CLASSES == "AutoPTX_42") and \
-            Config.EXPERIMENT_TYPE == "dm_regression":
-        if Config.RESOLUTION == "1.25mm":
-            Config.LABELS_FILENAME = "bundle_masks_autoPTX_dm"
-        else:
-            Config.LABELS_FILENAME = "NOT_AVAILABLE"
+    # elif (Config.CLASSES == "AutoPTX" or Config.CLASSES == "AutoPTX_42") and \
+    #         Config.EXPERIMENT_TYPE == "dm_regression":
+    #     if Config.RESOLUTION == "1.25mm":
+    #         Config.LABELS_FILENAME = "bundle_masks_autoPTX_dm"
+    #     else:
+    #         Config.LABELS_FILENAME = "NOT_AVAILABLE"
 
     else:
         Config.LABELS_FILENAME = "bundle_peaks/" + Config.CLASSES
@@ -360,20 +361,24 @@ def get_dwi_affine(dataset, resolution):
         raise ValueError("No Affine defined for this dataset and resolution")
 
 
-def get_cv_fold(fold, dataset="HCP"):
-    if dataset == "HCP_all":
-        subjects = get_all_subjects(dataset)
-        cut_point = int(len(subjects) * 0.9)
-        return subjects[:cut_point], subjects[cut_point:], ["599671", "599469"]
-    elif dataset == "HCP_90g":
+def get_cv_fold(Config):
+    fold=Config.CV_FOLD
+    dataset=Config.DATASET
+    if dataset == "HCP_all" or dataset == "HCP_vis": # all_subjects_HCP_all (1061 subjects are used) 
+        subjects = [subject for subject in get_all_subjects(dataset) if os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.FEATURES_FILENAME+'.nii.gz')) and os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.LABELS_FILENAME+'.nii.gz')) ]
+        print('len(subjects)',len(subjects))
+        cut_point_1 = int(len(subjects) * 0.7)
+        cut_point_2 = int(len(subjects) * 0.85)
+        return subjects[:cut_point_1], subjects[cut_point_1:cut_point_2], subjects[cut_point_2:]
+    elif dataset == "HCP_90g": # all_subjects_FINAL_with_complete_90g (1049 subjects are used)
         subjects = get_all_subjects(dataset)
         cut_point = int(len(subjects) * 0.7)
         return subjects[:cut_point], subjects[cut_point:], ["599671", "599469"]
-    elif dataset == "biobank_20k" or dataset == "biobank_10":
-        subjects = get_all_subjects(dataset)
-        cut_point = int(len(subjects) * 0.9)
-        return subjects[:cut_point], subjects[cut_point:], ["1000013", "1000013"]
-    else:
+    # elif dataset == "biobank_20k" or dataset == "biobank_10":
+    #     subjects = get_all_subjects(dataset)
+    #     cut_point = int(len(subjects) * 0.9)
+    #     return subjects[:cut_point], subjects[cut_point:], ["1000013", "1000013"]
+    else: # dataset == "HCP" goes here, which means that only 105 subjects are used (all_subjects_FINAL)
         if fold == 0:
             train, validate, test = [0, 1, 2], [3], [4]
         elif fold == 1:
@@ -385,8 +390,7 @@ def get_cv_fold(fold, dataset="HCP"):
         elif fold == 4:
             train, validate, test = [4, 0, 1], [2], [3]
 
-        subjects = get_all_subjects(dataset)
-
+        subjects = get_all_subjects(dataset) # only 105 subjects are used (all_subjects_FINAL)
         if dataset.startswith("HCP"):
             subjects = list(utils.chunks(subjects, 21))   #5 folds a 21 subjects
             # 5 fold CV ok (score only 1%-point worse than 10 folds (80 vs 60 train subjects) (10 Fold CV impractical!)
@@ -613,3 +617,49 @@ def get_optimal_orientation_for_bundle(bundle):
                            'ST_OCC_right': 'sagittal'}
 
     return bundles_orientation[bundle]
+
+    # class BatchGenerator2D_Npy_random(SlimDataLoaderBase):
+#     """
+#     Takes image ID provided via self._data, loads the Npy (numpy array) image and randomly samples 2D slices from it.
+#     Needed for fusion training.
+
+#     Timing:
+#     About 2s per 54-batch 45 bundles 1.25mm.
+#     """
+#     def __init__(self, *args, **kwargs):
+#         super(self.__class__, self).__init__(*args, **kwargs)
+#         self.Config = None
+
+#     def generate_train_batch(self):
+
+#         subjects = self._data[0]
+#         subject_idx = int(random.uniform(0, len(subjects)))
+
+#         if self.Config.TYPE == "combined":
+#             if np.random.random() < 0.5:
+#                 data = np.load(join(C.DATA_PATH, "HCP_fusion_npy_270g_125mm",
+#                                     subjects[subject_idx], "270g_125mm_xyz.npy"), mmap_mode="r")
+#             else:
+#                 data = np.load(join(C.DATA_PATH, "HCP_fusion_npy_32g_25mm",
+#                                     subjects[subject_idx], "32g_25mm_xyz.npy"), mmap_mode="r")
+#             data = np.reshape(data, (data.shape[0], data.shape[1], data.shape[2], data.shape[3] * data.shape[4]))
+#             seg = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
+#                                self.Config.LABELS_FILENAME + ".npy"), mmap_mode="r")
+#         else:
+#             data = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
+#                                 self.Config.FEATURES_FILENAME + ".npy"), mmap_mode="r")
+#             seg = np.load(join(C.DATA_PATH, self.Config.DATASET_FOLDER, subjects[subject_idx],
+#                                self.Config.LABELS_FILENAME + ".npy"), mmap_mode="r")
+
+#         data = np.nan_to_num(data)
+#         seg = np.nan_to_num(seg)
+
+#         slice_idxs = np.random.choice(data.shape[0], self.batch_size, False, None)
+#         slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION)
+#         x, y = data_utils.sample_slices(data, seg, slice_idxs,
+#                                         slice_direction=slice_direction,
+#                                         labels_type=self.Config.LABELS_TYPE)
+
+#         data_dict = {"data": x,  # (batch_size, channels, x, y, [z])
+#                      "seg": y}  # (batch_size, channels, x, y, [z])
+#         return data_dict

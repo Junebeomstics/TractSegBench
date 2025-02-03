@@ -1,4 +1,3 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -20,7 +19,10 @@ from tractseg.libs import metric_utils
 from tractseg.libs import plot_utils
 from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils
+from tractseg.data.datasets import MRISliceDataset
 
+from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
+import torch
 
 def _get_weights_for_this_epoch(Config, epoch_nr):
     if Config.LOSS_WEIGHT is None:
@@ -46,7 +48,7 @@ def _update_metrics(calc_f1, experiment_type, metric_types, metrics, metr_batch,
 
             metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
 
-        else:
+        else: # belong to here
             metr_batch["f1_macro"] = np.mean(metr_batch["f1_macro"])
             metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
 
@@ -55,16 +57,16 @@ def _update_metrics(calc_f1, experiment_type, metric_types, metrics, metr_batch,
     return metrics
 
 
-def train_model(Config, model, data_loader):
+def train_model(Config, model, data_loader, run, scheduler=None):
 
-    if Config.USE_VISLOGGER:
-        try:
-            from trixi.logger.visdom import PytorchVisdomLogger
-        except ImportError:
-            pass
-        trixi = PytorchVisdomLogger(port=8080, auto_start=True)
+    # if Config.USE_VISLOGGER:
+    #     try:
+    #         from trixi.logger.visdom import PytorchVisdomLogger
+    #     except ImportError:
+    #         pass
+    #     trixi = PytorchVisdomLogger(port=8080, auto_start=True)
 
-    exp_utils.print_and_save(Config.EXP_PATH, socket.gethostname())
+    # exp_utils.print_and_save(Config.EXP_PATH, socket.gethostname())
 
     epoch_times = []
     nr_of_updates = 0
@@ -74,33 +76,43 @@ def train_model(Config, model, data_loader):
         for metric in Config.METRIC_TYPES:
             metrics[metric + "_" + type] = [0]
 
+    if Config.N_GPU > 1:
+        Config.BATCH_SIZE = Config.BATCH_SIZE * Config.N_GPU
+
+    # Define dataloaders 
     batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
                                                       subjects=getattr(Config, "TRAIN_SUBJECTS"))
     batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
                                                     subjects=getattr(Config, "VALIDATE_SUBJECTS"))
 
-    for epoch_nr in range(Config.NUM_EPOCHS):
+    # train_dataset = MRISliceDataset(config=Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=True)
+    # val_dataset = MRISliceDataset(config=Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=False)
+    # train_dataloader = DataLoader(train_dataset, batch_size=1)
+    # val_dataloader = DataLoader(val_dataset, batch_size=1)
+
+    for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
 
         timings = defaultdict(lambda: 0)
         batch_nr = defaultdict(lambda: 0)
-        weight_factor = _get_weights_for_this_epoch(Config, epoch_nr)
+        weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
         types = ["validate"] if Config.ONLY_VAL else ["train", "validate"]
 
         for type in types:
             print_loss = []
 
             if Config.DIM == "2D":
-                nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0]
+                nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0] # INPUT_DIM[0] = 144 for HCP data 1.25mm
             else:
                 nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
 
-            # *Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net
+            # *Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)
             nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
 
             print("Start looping batches...")
             start_time_batch_part = time.time()
             for i in range(nr_batches):
+            #for data in train_dataloader:
 
                 batch = next(batch_gen_train) if type == "train" else next(batch_gen_val)
 
@@ -110,11 +122,26 @@ def train_model(Config, model, data_loader):
                 x = batch["data"]  # (bs, nr_of_channels, x, y)
                 y = batch["seg"]  # (bs, nr_of_classes, x, y)
 
+                # print('model_input x.shape:',x.shape) # torch.Size([bs, 9 (channel), 144, 144])
+                # print('model_input y.shape:',y.shape) # torch.Size([bs, 72, 144, 144])
+
+                if Config.MODEL == "LatentDiffusionModel":
+                    # Sample random timesteps
+                    timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
+
+                    # Add noise to inputs (forward diffusion)
+                    noise = torch.randn_like(x)
+                    x = scheduler.add_noise(x, noise, timesteps)
+                    y = noise
+                else:
+                    noise = None
+                    timesteps = None
+
                 timings["data_preparation_time"] += time.time() - start_time_data_preparation
                 start_time_network = time.time()
                 if type == "train":
                     nr_of_updates += 1
-                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor)
+                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps)
                 elif type == "validate":
                     probs, metr_batch = model.test(x, y, weight_factor=weight_factor)
                 elif type == "test":
@@ -122,6 +149,7 @@ def train_model(Config, model, data_loader):
                 timings["network_time"] += time.time() - start_time_network
 
                 start_time_metrics = time.time()
+                # metrics
                 metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
                                           metrics, metr_batch, type)
                 timings["metrics_time"] += time.time() - start_time_metrics
@@ -135,9 +163,7 @@ def train_model(Config, model, data_loader):
                         round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
                     print_loss = []
 
-                if Config.USE_VISLOGGER:
-                    plot_utils.plot_result_trixi(trixi, x, y, probs, metr_batch["loss"], metr_batch["f1_macro"], epoch_nr)
-
+                
 
         ################################### Post Training tasks (each epoch) ###################################
 
@@ -150,8 +176,11 @@ def train_model(Config, model, data_loader):
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["train"], type="train")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
 
+        for key,value in metrics.items():
+            run[key].log(metrics[key][-1])
+        run['learning_rate'].log(model.optimizer.param_groups[0]['lr'])
         print("  Epoch {}, Average Epoch loss = {}".format(epoch_nr, metrics["loss_train"][-1]))
-        exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
+        # exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
 
         # Adapt LR
         if Config.LR_SCHEDULE:
@@ -164,30 +193,31 @@ def train_model(Config, model, data_loader):
         # Save Weights
         start_time_saving = time.time()
         if Config.SAVE_WEIGHTS:
+            # save model and save optimizer state
             model.save_model(metrics, epoch_nr, mode=Config.BEST_EPOCH_SELECTION)
         timings["saving_time"] += time.time() - start_time_saving
 
         # Create Plots
-        start_time_plotting = time.time()
-        pickle.dump(metrics, open(join(Config.EXP_PATH, "metrics.pkl"), "wb"))
-        plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME,
-                                   keys=["loss", "f1_macro"],
-                                   types=["train", "validate"],
-                                   selected_ax=["loss", "f1"],
-                                   fig_name="metrics_all.png")
-        plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
-                                   keys=["loss", "f1_macro"],
-                                   types=["train", "validate"],
-                                   selected_ax=["loss", "f1"],
-                                   fig_name="metrics.png")
-        if "angle_err" in Config.METRIC_TYPES:
-            plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
-                                       keys=["loss", "angle_err"],
-                                       types=["train", "validate"],
-                                       selected_ax=["loss", "f1"],
-                                       fig_name="metrics_angle.png")
+        # start_time_plotting = time.time()
+        # pickle.dump(metrics, open(join(Config.EXP_PATH, "metrics.pkl"), "wb"))
+        # plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME,
+        #                            keys=["loss", "f1_macro"],
+        #                            types=["train", "validate"],
+        #                            selected_ax=["loss", "f1"],
+        #                            fig_name="metrics_all.png")
+        # plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
+        #                            keys=["loss", "f1_macro"],
+        #                            types=["train", "validate"],
+        #                            selected_ax=["loss", "f1"],
+        #                            fig_name="metrics.png")
+        # if "angle_err" in Config.METRIC_TYPES:
+        #     plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
+        #                                keys=["loss", "angle_err"],
+        #                                types=["train", "validate"],
+        #                                selected_ax=["loss", "f1"],
+        #                                fig_name="metrics_angle.png")
 
-        timings["plotting_time"] += time.time() - start_time_plotting
+        # timings["plotting_time"] += time.time() - start_time_plotting
 
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
@@ -202,10 +232,10 @@ def train_model(Config, model, data_loader):
         if epoch_nr < Config.NUM_EPOCHS-1:
             metrics = metric_utils.add_empty_element(metrics)
 
-    with open(join(Config.EXP_PATH, "Hyperparameters.txt"), "a") as f:
-        f.write("\n\nAverage Epoch time: {}s".format(sum(epoch_times) / float(len(epoch_times))))
-
-
+    # with open(join(Config.EXP_PATH, "Hyperparameters.txt"), "a") as f:
+    #     f.write("\n\nAverage Epoch time: {}s".format(sum(epoch_times) / float(len(epoch_times))))
+    
+        
 def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=True, only_prediction=False,
                 batch_size=1, unit_test=False):
     """

@@ -1,4 +1,3 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -6,26 +5,33 @@ from __future__ import print_function
 from os.path import join
 
 from tractseg.data import dataset_specific_utils
-from tractseg.libs.system_config import SystemConfig as C
+#from tractseg.libs.system_config import SystemConfig as C
 
 
 class Config:
     """
     Settings and hyperparameters
     """
+    # arguments from C
+    HOME = '/global/cfs/projectdirs/m4673/junbeom/TractSegVis/TractSeg'
+    TRACT_SEG_HOME=join(HOME,'.tractseg') 
+    NETWORK_DRIVE = None
+    WEIGHTS_DIR = TRACT_SEG_HOME
+    DATA_PATH = HOME
+    
 
     # input data
     EXPERIMENT_TYPE = "tract_segmentation"  # tract_segmentation|endings_segmentation|dm_regression|peak_regression
-    EXP_NAME = "HCP_TEST"
+    EXP_NAME = "hcp_exp" # replaced by custom experiment name
     EXP_MULTI_NAME = ""  # CV parent directory name; leave empty for single bundle experiment
-    DATASET_FOLDER = "HCP_preproc"
+    DATASET_FOLDER = "HCP_preproc" # "HCP_for_training"
     LABELS_FOLDER = "bundle_masks"
-    MULTI_PARENT_PATH = join(C.EXP_PATH, EXP_MULTI_NAME)
-    EXP_PATH = join(C.EXP_PATH, EXP_MULTI_NAME, EXP_NAME)  # default path
+    EXP_PATH = join(HOME, EXP_MULTI_NAME, EXP_NAME)  # default path
+    MULTI_PARENT_PATH = join(EXP_PATH, EXP_MULTI_NAME) #join(C.EXP_PATH, EXP_MULTI_NAME)
     CLASSES = "All"
     NR_OF_GRADIENTS = 9
     NR_OF_CLASSES = len(dataset_specific_utils.get_bundle_names(CLASSES)[1:])
-    INPUT_DIM = None  # autofilled
+    # data preprocessing
     DATASET = "HCP"  # HCP | HCP_32g | Schizo
     RESOLUTION = "1.25mm"  # 1.25mm|2.5mm
     # 12g90g270g | 270g_125mm_xyz | 270g_125mm_peaks | 90g_125mm_peaks | 32g_25mm_peaks | 32g_25mm_xyz
@@ -33,10 +39,13 @@ class Config:
     LABELS_FILENAME = ""  # autofilled
     LABELS_TYPE = "int"
     THRESHOLD = 0.5  # Binary: 0.5, Regression: 0.01
+    N_GPU = 1
 
     # hyperparameters
     MODEL = "UNet_Pytorch_DeepSup"
+    compile = True
     DIM = "2D"  # 2D | 3D
+    INPUT_DIM = (144,144) # autofilled
     BATCH_SIZE = 47
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
@@ -56,10 +65,13 @@ class Config:
     USE_DROPOUT = False
     DROPOUT_SAMPLING = False
     LOAD_WEIGHTS = False
+    RESUME_TRAINING = False
     # WEIGHTS_PATH = join(C.EXP_PATH, "My_experiment/best_weights_ep64.npz")
     WEIGHTS_PATH = ""  # if empty string: autoloading the best_weights in get_best_weights_path()
     SAVE_WEIGHTS = True
-    TYPE = "single_direction"  # single_direction | combined
+    TYPE = "single_direction"  
+    # single_direction | combined 
+    # single_direction use nifti files as input (sampling randomly), while combined uses predetermined slices from numpy files
     CV_FOLD = 0
     VALIDATE_SUBJECTS = []
     TRAIN_SUBJECTS = []
@@ -112,6 +124,8 @@ class Config:
     DAUG_INFO = "-"
     INFO = "-"
 
+    RESIZE_TO_512 = False
+
     # for inference
     PREDICT_IMG = False
     PREDICT_IMG_OUTPUT = None
@@ -119,3 +133,5 @@ class Config:
     KEEP_INTERMEDIATE_FILES = False
     CSD_RESOLUTION = "LOW"  # HIGH | LOW
     NR_CPUS = -1
+
+
