@@ -4,7 +4,6 @@ from nilearn.image import concat_imgs
 # HCP105_Zenodo_NewTrkFormat 폴더 경로 설정
 base_dir = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/HCP_tractmasks"
 output_root = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/HCP_for_training_brainlife"
-tract_num = 61
 
 # 각 subject 폴더를 순회
 for subject_id in sorted(os.listdir(base_dir)):
@@ -20,7 +19,7 @@ for subject_id in sorted(os.listdir(base_dir)):
     #여기서 정렬해야.
 
     # NIfTI 파일들을 결합
-    if len(nifti_files) == tract_num:  # 파일이 있는 경우에만 처리
+    if nifti_files:  # 파일이 있는 경우에만 처리
         combined_img = concat_imgs(nifti_files)
 
         # 새로운 저장 경로 설정: HCP/subject_id/
@@ -29,7 +28,6 @@ for subject_id in sorted(os.listdir(base_dir)):
 
         # 결합된 이미지 저장
         combined_img.to_filename(os.path.join(output_dir, "bundle_masks.nii.gz"))
-    else:
-        print(f'filter {subject_id}, because it only has {len(nifti_files)} files.')
+
 print("All subjects processed and saved.")
 

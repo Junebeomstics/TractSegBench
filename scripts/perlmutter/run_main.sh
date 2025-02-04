@@ -9,7 +9,9 @@
 #SBATCH --exclusive
 #SBATCH --output=R-%x-%j.out
 #SBATCH --mail-user=kjb961013@snu.ac.kr
+#SBATCH --chdir=/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/
 module load pytorch/2.1.0
 
-./ExpRunner --config Zenedo_experiment_sorted_aligned --en run_with_default_settings_sorted_aligned --train True --test True --seg
+cd /global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/
+./ExpRunner --config wholeHCP_experiment_TractSeg --en run_with_wholeHCP_TractSeg --train True --test True --seg
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
