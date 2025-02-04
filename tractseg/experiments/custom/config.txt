@@ -1,0 +1,1 @@
+working_dir='/global/cfs/cdirs/m4673/junbeom/TractSegVis/HCP_for_training_COPY'
