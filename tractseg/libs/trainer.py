@@ -112,8 +112,6 @@ def train_model(Config, model, data_loader, run, scheduler=None):
             print("Start looping batches...")
             start_time_batch_part = time.time()
             for i in range(nr_batches):
-            #for data in train_dataloader:
-
                 batch = next(batch_gen_train) if type == "train" else next(batch_gen_val)
 
                 start_time_data_preparation = time.time()
@@ -183,11 +181,14 @@ def train_model(Config, model, data_loader, run, scheduler=None):
         # exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
 
         # Adapt LR
-        if Config.LR_SCHEDULE:
+        if Config.LR_SCHEDULE and Config.LR_SCHEDULE_TYPE == "ReduceLROnPlateau":
             if Config.LR_SCHEDULE_MODE == "min":
                 model.scheduler.step(metrics["loss_validate"][-1])
             else:
                 model.scheduler.step(metrics["f1_macro_validate"][-1])
+            model.print_current_lr()
+        elif Config.LR_SCHEDULE and Config.LR_SCHEDULE_TYPE == "CosineAnnealingLR":
+            model.scheduler.step()
             model.print_current_lr()
 
         # Save Weights

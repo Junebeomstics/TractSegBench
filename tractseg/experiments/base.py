@@ -13,7 +13,7 @@ class Config:
     Settings and hyperparameters
     """
     # arguments from C
-    HOME = '/global/cfs/projectdirs/m4673/junbeom/TractSegVis/TractSeg'
+    HOME = '/grand/NeuroX/junbeom/TractSegVis/TractSeg'
     TRACT_SEG_HOME=join(HOME,'.tractseg') 
     NETWORK_DRIVE = None
     WEIGHTS_DIR = TRACT_SEG_HOME
@@ -47,10 +47,17 @@ class Config:
     DIM = "2D"  # 2D | 3D
     INPUT_DIM = (144,144) # autofilled
     BATCH_SIZE = 47
+    SUBJECTS_PER_BATCH = 1
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
+    LR_SCHEDULE_TYPE = "ReduceLROnPlateau" # ReduceLROnPlateau | CosineAnnealingLR
     LR_SCHEDULE_MODE = "min"  # min | max
     LR_SCHEDULE_PATIENCE = 20
+    LR_GAMMA = 0.5 # only for CosineAnnealingLR
+    LR_WARMUP_RATIO = 0.01 # only for CosineAnnealingLR
+    LR_CYCLE = 1 # only for CosineAnnealingLR # size of the first cycle
+    LR_T_MULT = -1 # only for CosineAnnealingLR 
+
     UNET_NR_FILT = 64
     EPOCH_MULTIPLIER = 1  # 2D: 1, 3D: 12 for lowRes, 3 for highRes
     NUM_EPOCHS = 250
