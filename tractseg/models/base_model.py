@@ -36,6 +36,22 @@ import math
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
+def sizeof_number(number, currency=None):
+    """
+    format values per thousands : K-thousands, M-millions, B-billions. 
+    
+    parameters:
+    -----------
+    number is the number you want to format
+    currency is the prefix that is displayed if provided (€, $, £...)
+    
+    """
+    currency='' if currency is None else currency + ' '
+    for unit in ['','K','M']:
+        if abs(number) < 1000.0:
+            return f"{currency}{number:6.2f}{unit}"
+        number /= 1000.0
+    return f"{currency}{number:6.2f}B"
 
 class BaseModel:
     def __init__(self, Config, inference=False):
@@ -111,8 +127,8 @@ class BaseModel:
         # Print the number of trainable and total parameters
         total_params = sum(p.numel() for p in self.net.parameters())
         trainable_params = sum(p.numel() for p in self.net.parameters() if p.requires_grad)
-        print(f"Total parameters: {total_params}")
-        print(f"Trainable parameters: {trainable_params}")
+        print(f"Total parameters: {sizeof_number(total_params)}")
+        print(f"Trainable parameters: {sizeof_number(trainable_params)}")
 
         if self.Config.compile:
             self.net = torch.compile(self.net)
@@ -122,8 +138,10 @@ class BaseModel:
         # exp_utils.print_and_save(self.Config.EXP_PATH, "nr of gpus: {}".format(nr_gpus))
         # self.net = nn.DataParallel(self.net)
 
-        if self.Config.N_GPU > 1:
-            net = nn.DataParallel(self.net)
+        if torch.cuda.device_count() > 1 and self.Config.USE_DP:
+            print('Using DataParallel')
+            self.net = nn.DataParallel(self.net)
+            net = self.net.to("cuda")
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             net = self.net.to(self.device)

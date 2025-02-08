@@ -76,8 +76,8 @@ def train_model(Config, model, data_loader, run, scheduler=None):
         for metric in Config.METRIC_TYPES:
             metrics[metric + "_" + type] = [0]
 
-    if Config.N_GPU > 1:
-        Config.BATCH_SIZE = Config.BATCH_SIZE * Config.N_GPU
+    # if torch.cuda.device_count() > 1 and Config.USE_DP:
+    #     Config.BATCH_SIZE = Config.BATCH_SIZE * torch.cuda.device_count() 
 
     # Define dataloaders 
     batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
