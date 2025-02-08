@@ -72,6 +72,7 @@ def main():
 
     parser.add_argument("--with_id", type=str, default=None, help="Neptune run id")
     parser.add_argument("--weights_path", type=str, default="", help="path to weights if not using path in Config")
+    parser.add_argument("--use_dp", action="store_true", help="whether to activate DataParallel")
     args = parser.parse_args()
 
     run = neptune.init_run(
@@ -110,6 +111,8 @@ def main():
         Config.WITH_ID = args.with_id
     if args.weights_path:
         Config.WEIGHTS_PATH = args.weights_path
+    if args.use_dp:
+        Config.USE_DP = args.use_dp
     Config.VERBOSE = args.verbose # by default: verbose = True
 
     Config.MULTI_PARENT_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME) # by default: C.EXP_PATH = "hcp_exp", Config.EXP_MULTI_NAME=""
