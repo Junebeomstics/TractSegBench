@@ -13,7 +13,7 @@ class Config:
     Settings and hyperparameters
     """
     # arguments from C
-    HOME = '/grand/NeuroX/junbeom/TractSegVis/TractSeg'
+    HOME = '/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg' #/grand/NeuroX/junbeom/TractSegVis/TractSeg'
     TRACT_SEG_HOME=join(HOME,'.tractseg') 
     NETWORK_DRIVE = None
     WEIGHTS_DIR = TRACT_SEG_HOME
@@ -39,14 +39,19 @@ class Config:
     LABELS_FILENAME = ""  # autofilled
     LABELS_TYPE = "int"
     THRESHOLD = 0.5  # Binary: 0.5, Regression: 0.01
-    N_GPU = 1
+    USE_DP = False
+    USE_DDP = False
+    LOG_PER_BUNDLE = False
 
     # hyperparameters
     MODEL = "UNet_Pytorch_DeepSup"
-    compile = True
+    COMPILE = True
     DIM = "2D"  # 2D | 3D
     INPUT_DIM = (144,144) # autofilled
-    BATCH_SIZE = 47
+    BATCH_SIZE = 4
+    VAL_BATCH_SIZE = 8
+    NR_SLICES = 47
+    
     SUBJECTS_PER_BATCH = 1
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
@@ -98,7 +103,6 @@ class Config:
     FLIP_OUTPUT_PEAKS = False  # flip peaks along z axis to make them compatible with MITK
     USE_VISLOGGER = False
     SEG_INPUT = "Peaks"  # Gradients | Peaks
-    NR_SLICES = 1
     PRINT_FREQ = 20
     NORMALIZE_DATA = True
     NORMALIZE_PER_CHANNEL = False

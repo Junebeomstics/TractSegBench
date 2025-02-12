@@ -15,6 +15,7 @@ from torch.optim import Adam
 from torch.optim import AdamW
 import torch.optim.lr_scheduler as lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler
+from tractseg.libs.lr_scheduler import CosineAnnealingWarmUpRestarts
 import torch.nn.functional as F
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
@@ -29,6 +30,7 @@ from torch.cuda.amp import autocast, GradScaler
 from tractseg.libs import pytorch_utils
 from tractseg.libs import exp_utils
 from tractseg.libs import metric_utils
+from tractseg.data import dataset_specific_utils
 
 from monai.networks.nets import UNet
 
@@ -36,26 +38,19 @@ import math
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
-def sizeof_number(number, currency=None):
-    """
-    format values per thousands : K-thousands, M-millions, B-billions. 
-    
-    parameters:
-    -----------
-    number is the number you want to format
-    currency is the prefix that is displayed if provided (€, $, £...)
-    
-    """
-    currency='' if currency is None else currency + ' '
-    for unit in ['','K','M']:
-        if abs(number) < 1000.0:
-            return f"{currency}{number:6.2f}{unit}"
-        number /= 1000.0
-    return f"{currency}{number:6.2f}B"
+from collections import defaultdict
+
+from segment_anything import sam_model_registry
+from sam_fact_tt_image_encoder import Fact_tt_Sam
+from importlib import import_module
+
 
 class BaseModel:
     def __init__(self, Config, inference=False):
         self.Config = Config
+
+        # Set device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Do not use during inference because uses a lot more memory
         if not inference:
@@ -105,15 +100,12 @@ class BaseModel:
                 self.net.load_from(weights=weight)
                 print("Using pretrained self-supervied Swin UNETR backbone weights !")
         elif self.Config.MODEL == 'MASAM':
-            from segment_anything import sam_model_registry
-            from sam_fact_tt_image_encoder import Fact_tt_Sam
-            from importlib import import_module
             sam, img_embedding_size = sam_model_registry[self.Config.vit_name](image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE_TO_512 else 512,
                                                                 num_classes=self.Config.NR_OF_CLASSES-1,
                                                                 checkpoint=self.Config.WEIGHTS_PATH if self.Config.RESUME_TRAINING==False else None, in_chans=9, pixel_mean=[0., 0., 0.],
                                                                 pixel_std=[1., 1., 1.])
             pkg = import_module(self.Config.module)
-            self.net = pkg.Fact_tt_Sam(sam, self.Config.rank, s=self.Config.scale).cuda()
+            self.net = pkg.Fact_tt_Sam(sam, self.Config.rank, s=self.Config.scale)
 
         elif self.Config.MODEL.lower() == 'monai_unet':
             self.net = UNet(in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]), channels=(4, 8, 16), strides=(2, 2))
@@ -127,33 +119,32 @@ class BaseModel:
         # Print the number of trainable and total parameters
         total_params = sum(p.numel() for p in self.net.parameters())
         trainable_params = sum(p.numel() for p in self.net.parameters() if p.requires_grad)
-        print(f"Total parameters: {sizeof_number(total_params)}")
-        print(f"Trainable parameters: {sizeof_number(trainable_params)}")
+        print(f"Total parameters: {exp_utils.sizeof_number(total_params)}")
+        print(f"Trainable parameters: {exp_utils.sizeof_number(trainable_params)}")
 
-        if self.Config.compile:
-            self.net = torch.compile(self.net)
+        self.net = self.net.to(self.device)
+
         # MultiGPU setup
         # (Not really faster (max 10% speedup): GPU and CPU utility low)
         # nr_gpus = torch.cuda.device_count()
         # exp_utils.print_and_save(self.Config.EXP_PATH, "nr of gpus: {}".format(nr_gpus))
         # self.net = nn.DataParallel(self.net)
 
+        if self.Config.COMPILE:
+            self.net = torch.compile(self.net)
+
         if torch.cuda.device_count() > 1 and self.Config.USE_DP:
-            print('Using DataParallel')
+            print(f'Using DataParallel across {torch.cuda.device_count()} GPUs')
             self.net = nn.DataParallel(self.net)
-            net = self.net.to("cuda")
-        else:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            net = self.net.to(self.device)
         
         if self.Config.OPTIMIZER == "AdamW":
-            self.optimizer = AdamW(net.parameters(), lr=self.Config.LEARNING_RATE,
+            self.optimizer = AdamW(self.net.parameters(), lr=self.Config.LEARNING_RATE,
                                    weight_decay=self.Config.WEIGHT_DECAY)
         elif self.Config.OPTIMIZER == "Adamax":
-            self.optimizer = Adamax(net.parameters(), lr=self.Config.LEARNING_RATE,
+            self.optimizer = Adamax(self.net.parameters(), lr=self.Config.LEARNING_RATE,
                                     weight_decay=self.Config.WEIGHT_DECAY)
         elif self.Config.OPTIMIZER == "Adam":
-            self.optimizer = Adam(net.parameters(), lr=self.Config.LEARNING_RATE,
+            self.optimizer = Adam(self.net.parameters(), lr=self.Config.LEARNING_RATE,
                                   weight_decay=self.Config.WEIGHT_DECAY)
         else:
             raise ValueError("Optimizer not defined")
@@ -202,201 +193,250 @@ class BaseModel:
         # if self.Config.RESET_LAST_LAYER:
         #     self.net.conv_5 = nn.Conv2d(self.Config.UNET_NR_FILT, self.Config.NR_OF_CLASSES, kernel_size=1,
         #                                 stride=1, padding=0, bias=True).to(self.device)
+    def train(self, X, y, weight_factor=None, timesteps=None, type=None):
+        X = X.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, features, x, y)
+        y = y.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, classes, x, y)
 
-
-    def train(self, X, y, weight_factor=None, timesteps=None):
-        X = X.contiguous().cuda(non_blocking=True)  # (bs, features, x, y)
-        y = y.contiguous().cuda(non_blocking=True)  # (bs, classes, x, y)
-
-        if self.Config.RESIZE_TO_512:
-            X = F.interpolate(X, size=(512, 512), mode='bicubic', align_corners=False) # (bs, features, 144, 144) -> (bs, features, 512, 512)
-            y = F.interpolate(y, size=(512, 512), mode='nearest') # (bs, classes, 144, 144) -> (bs, classes, 512, 512)
-
+        if self.Config.RESIZE:
+            bs, slices, features, w, h = X.shape
+            X = X.view(bs * slices, features, w, h)
+            y = y.view(bs * slices, -1, w, h) 
+            X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE), mode='bicubic', align_corners=False) # (bs * slices, features, 144, 144) -> (bs * slices, features, 512, 512)
+            y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE), mode='nearest') # (bs * slices, classes, 144, 144) -> (bs * slices, classes, 512, 512)
+            X = X.view(bs, slices, features, self.Config.RESIZE, self.Config.RESIZE)
+            y = y.view(bs, slices, -1, self.Config.RESIZE, self.Config.RESIZE)  # keep classes
+            
+            # final: (bs, slices, classes, x, y)
+        
         if self.Config.MODEL == "MASAM":
-            X = X.unsqueeze(0) # (bs(1), z, features, x, y)
+            bs, slices, classes, w, h = y.shape
+            # if MASAM, do not combine batch and slices dimension in input (X).
+            y = y.view(bs * slices, -1, w, h) 
+        else:
+            # if not MASAM, combine batch and slices dimension.
+            bs, slices, features, w, h = X.shape
+            X = X.view(bs * slices, features, w, h)
+            y = y.view(bs * slices, -1, w, h) 
 
-        self.net.train()
+        if type == 'train' or self.Config.DROPOUT_SAMPLING:  
+            self.net.train()
+        else:
+            self.net.train(False)
         self.optimizer.zero_grad() 
-        if APEX_AVAILABLE and self.Config.FP16:
-            with autocast():
+        if type == 'train':
+            if APEX_AVAILABLE and self.Config.FP16:
+                with autocast():
+                    if self.Config.MODEL == 'LatentDiffusionModel':
+                        outputs = self.net(X, timesteps)
+                    elif self.Config.MODEL == 'MASAM':
+                        outputs = self.net(batched_input=X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
+                        outputs = outputs['low_res_logits']
+                    else:
+                        outputs = self.net(X)
+                    angle_err = None
+                    if weight_factor is not None:
+                        if len(y.shape) == 4:  # 2D
+                            weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                                                y.shape[2], y.shape[3])).cuda()
+                        else:  # 3D
+                            weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                                                y.shape[2], y.shape[3], y.shape[4])).cuda()
+                        bundle_mask = y > 0
+                        weights[bundle_mask.data] *= weight_factor  # 10
+
+                        if self.Config.EXPERIMENT_TYPE == "peak_regression":
+                            loss, angle_err = self.criterion(outputs, y, weights)
+                        else:
+                            loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
+                    else:
+                        if self.Config.LOSS_FUNCTION == "soft_sample_dice" or self.Config.LOSS_FUNCTION == "soft_batch_dice":
+                            loss = self.criterion(F.sigmoid(outputs), y)
+                            # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)  # combined loss
+                        elif self.Config.LOSS_FUNCTION == "mse":
+                            loss = nn.MSELoss()(outputs, y)
+                        else:
+                            loss = self.criterion(outputs, y)
+                            
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+
+            else:
                 if self.Config.MODEL == 'LatentDiffusionModel':
-                    # Predict noise with the model
                     outputs = self.net(X, timesteps)
                 elif self.Config.MODEL == 'MASAM':
-                    outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE_TO_512 else 512)
+                    outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
                     outputs = outputs['low_res_logits']
-                    # print('outputs.shape:',outputs.shape)
-                    #print('outputs:', outputs)
                 else:
                     outputs = self.net(X)
                 angle_err = None
                 if weight_factor is not None:
                     if len(y.shape) == 4:  # 2D
-                        weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                        weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
                                             y.shape[2], y.shape[3])).cuda()
                     else:  # 3D
-                        weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                        weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
                                             y.shape[2], y.shape[3], y.shape[4])).cuda()
                     bundle_mask = y > 0
                     weights[bundle_mask.data] *= weight_factor  # 10
 
-                    if self.Config.EXPERIMENT_TYPE == "peak_regression":
-                        loss, angle_err = self.criterion(outputs, y, weights)
-                    else:
-                        loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
+                    # if self.Config.EXPERIMENT_TYPE == "peak_regression":
+                    #     loss, angle_err = self.criterion(outputs, y, weights)
+                    # else:
+                    loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
                 else:
                     if self.Config.LOSS_FUNCTION == "soft_sample_dice" or self.Config.LOSS_FUNCTION == "soft_batch_dice":
                         loss = self.criterion(F.sigmoid(outputs), y)
                         # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)  # combined loss
-                    elif self.Config.LOSS_FUNCTION == "mse":
-                        loss = nn.MSELoss()(outputs, y)
                     else:
                         loss = self.criterion(outputs, y)
-
-        else:        
-            outputs = self.net(X)  # (bs, classes, x, y)
+                loss.backward()
+                self.optimizer.step()
+        elif type == 'validate' or type == 'test':
+            with torch.no_grad():
+                if self.Config.MODEL == 'MASAM':
+                    outputs = self.net(batched_input=X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
+                    outputs = outputs['low_res_logits']
+                else:
+                    outputs = self.net(X)
             angle_err = None
             if weight_factor is not None:
                 if len(y.shape) == 4:  # 2D
-                    weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                    weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
                                         y.shape[2], y.shape[3])).cuda()
                 else:  # 3D
-                    weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
+                    weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
                                         y.shape[2], y.shape[3], y.shape[4])).cuda()
                 bundle_mask = y > 0
-                weights[bundle_mask.data] *= weight_factor  # 10
-
-                if self.Config.EXPERIMENT_TYPE == "peak_regression":
-                    loss, angle_err = self.criterion(outputs, y, weights)
-                else:
-                    loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
+                weights[bundle_mask.data] *= weight_factor  
+                loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
             else:
                 if self.Config.LOSS_FUNCTION == "soft_sample_dice" or self.Config.LOSS_FUNCTION == "soft_batch_dice":
                     loss = self.criterion(F.sigmoid(outputs), y)
-                    # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)  # combined loss
+                    # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)
                 else:
                     loss = self.criterion(outputs, y)
-        
-        if APEX_AVAILABLE and self.Config.FP16:
-            # with amp.scale_loss(loss, self.optimizer) as scaled_loss:
-            #     scaled_loss.backward()
-            self.scaler.scale(loss).backward()
-            self.scaler.step(self.optimizer)
-            self.scaler.update()
-        else:
-            loss.backward()
-            self.optimizer.step()
+        # if self.Config.EXPERIMENT_TYPE == "peak_regression":
+        #     f1 = metric_utils.calc_peak_length_dice_pytorch(self.Config.CLASSES, outputs.detach(), y.detach(),
+        #                                                     max_angle_error=self.Config.PEAK_DICE_THR,
+        #                                                     max_length_error=self.Config.PEAK_DICE_LEN_THR)
+        # elif self.Config.EXPERIMENT_TYPE == "dm_regression":
+        #     f1 = pytorch_utils.f1_score_macro(y.detach() > self.Config.THRESHOLD, outputs.detach(),
+        #                                       per_class=True, threshold=self.Config.THRESHOLD)
+        # else:
+        f1 = pytorch_utils.f1_score_macro(y.detach(), F.sigmoid(outputs).detach(), per_class=True,
+                                          threshold=self.Config.THRESHOLD)
 
-        if self.Config.EXPERIMENT_TYPE == "peak_regression":
-            f1 = metric_utils.calc_peak_length_dice_pytorch(self.Config.CLASSES, outputs.detach(), y.detach(),
-                                                            max_angle_error=self.Config.PEAK_DICE_THR,
-                                                            max_length_error=self.Config.PEAK_DICE_LEN_THR)
-        elif self.Config.EXPERIMENT_TYPE == "dm_regression":
-            f1 = pytorch_utils.f1_score_macro(y.detach() > self.Config.THRESHOLD, outputs.detach(),
-                                              per_class=True, threshold=self.Config.THRESHOLD)
-        else:
-            f1 = pytorch_utils.f1_score_macro(y.detach(), F.sigmoid(outputs).detach(), per_class=True,
-                                              threshold=self.Config.THRESHOLD)
-
-        if self.Config.USE_VISLOGGER:
-            probs = F.sigmoid(outputs)
-        else:
-            probs = None  # faster
+        probs = F.sigmoid(outputs) if self.Config.USE_VISLOGGER else None
 
         metrics = {}
         metrics["loss"] = loss.item()
         metrics["f1_macro"] = f1
         metrics["angle_err"] = angle_err if angle_err is not None else 0
 
+        if self.Config.LOG_PER_BUNDLE:
+            for i, bundle_name in enumerate(dataset_specific_utils.get_bundle_names(self.Config.CLASSES)[1:]):
+                metrics[f'bundle_{bundle_name}_f1'] = f1[i]
         return probs, metrics
 
 
-    def test(self, X, y, weight_factor=None):
-        with torch.no_grad():
-            X = X.contiguous().cuda(non_blocking=True)
-            y = y.contiguous().cuda(non_blocking=True)
+    # def test(self, X, y, weight_factor=None):
         
-        if self.Config.RESIZE_TO_512:
-            X = F.interpolate(X, size=(512, 512), mode='bicubic', align_corners=False) # (bs, features, 144, 144) -> (bs, features, 512, 512)
-            y = F.interpolate(y, size=(512, 512), mode='nearest') # (bs, classes, 144, 144) -> (bs, classes, 512, 512)
+    #     X = X.contiguous().cuda(self.device, non_blocking=True)
+    #     y = y.contiguous().cuda(self.device, non_blocking=True)
+    
+    #     if self.Config.RESIZE:
+    #         bs, slices, features, w, h = X.shape
+    #         X = X.view(bs * slices, features, w, h)
+    #         y = y.view(bs * slices, -1, w, h) 
+    #         X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE), mode='bicubic', align_corners=False) # (bs * slices, features, 144, 144) -> (bs * slices, features, 512, 512)
+    #         y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE), mode='nearest') # (bs * slices, classes, 144, 144) -> (bs * slices, classes, 512, 512)
+    #         X = X.view(bs, slices, features, self.Config.RESIZE, self.Config.RESIZE)
+    #         y = y.view(bs, slices, -1, self.Config.RESIZE, self.Config.RESIZE)  # keep classes
+    #         # final: (bs, slices, classes, x, y)
+        
+    #     if self.Config.MODEL == "MASAM":
+    #         bs, slices, classes, w, h = y.shape
+    #         # if MASAM, do not combine batch and slices dimension in input (X).
+    #         y = y.view(bs * slices, -1, w, h) 
+    #     else:
+    #         # if not MASAM, combine batch and slices dimension.
+    #         bs, slices, features, w, h = X.shape
+    #         X = X.view(bs * slices, features, w, h)
+    #         y = y.view(bs * slices, -1, w, h) 
 
-        if self.Config.MODEL == "MASAM":
-            X = X.unsqueeze(0) # (bs(1), z, features, x, y)
+    #     if self.Config.DROPOUT_SAMPLING:
+    #         self.net.train()
+    #     else:
+    #         self.net.train(False)
+            
+    #     with torch.no_grad():
+    #         if self.Config.MODEL == 'MASAM':
+    #             outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
+    #             outputs = outputs['low_res_logits']
+    #         else:
+    #             outputs = self.net(X)
+                
+    #     angle_err = None
 
-        if self.Config.DROPOUT_SAMPLING:
-            self.net.train()
-        else:
-            self.net.train(False)
+    #     if weight_factor is not None:
+    #         if len(y.shape) == 4:  # 2D
+    #             weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
+    #                                   y.shape[2], y.shape[3])).cuda()
+    #         else:  # 3D
+    #             weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
+    #                                   y.shape[2], y.shape[3], y.shape[4])).cuda()
+    #         bundle_mask = y > 0
+    #         weights[bundle_mask.data] *= weight_factor
+    #         # if self.Config.EXPERIMENT_TYPE == "peak_regression":
+    #         #     loss, angle_err = self.criterion(outputs, y, weights)
+    #         # else:
+    #         loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
+    #     else:
+    #         if self.Config.LOSS_FUNCTION == "soft_sample_dice" or self.Config.LOSS_FUNCTION == "soft_batch_dice":
+    #             loss = self.criterion(F.sigmoid(outputs), y)
+    #             # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)
+    #         else:
+    #             loss = self.criterion(outputs, y)
 
-        if self.Config.MODEL == 'MASAM':
-            outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE_TO_512 else 512)
-            outputs = outputs['low_res_logits']
-        else:
-            outputs = self.net(X)
-        angle_err = None
+    #     # if self.Config.EXPERIMENT_TYPE == "peak_regression":
+    #     #     f1 = metric_utils.calc_peak_length_dice_pytorch(self.Config.CLASSES, outputs.detach(), y.detach(),
+    #     #                                                     max_angle_error=self.Config.PEAK_DICE_THR,
+    #     #                                                     max_length_error=self.Config.PEAK_DICE_LEN_THR)
+    #     # elif self.Config.EXPERIMENT_TYPE == "dm_regression":
+    #     #     f1 = pytorch_utils.f1_score_macro(y.detach() > self.Config.THRESHOLD, outputs.detach(),
+    #     #                                       per_class=True, threshold=self.Config.THRESHOLD)
+    #     # else:
+    #     f1 = pytorch_utils.f1_score_macro(y.detach(), F.sigmoid(outputs).detach(), per_class=True,
+    #                                       threshold=self.Config.THRESHOLD)
 
-        if weight_factor is not None:
-            if len(y.shape) == 4:  # 2D
-                weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
-                                      y.shape[2], y.shape[3])).cuda()
-            else:  # 3D
-                weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
-                                      y.shape[2], y.shape[3], y.shape[4])).cuda()
-            bundle_mask = y > 0
-            weights[bundle_mask.data] *= weight_factor
-            if self.Config.EXPERIMENT_TYPE == "peak_regression":
-                loss, angle_err = self.criterion(outputs, y, weights)
-            else:
-                loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)
-        else:
-            if self.Config.LOSS_FUNCTION == "soft_sample_dice" or self.Config.LOSS_FUNCTION == "soft_batch_dice":
-                loss = self.criterion(F.sigmoid(outputs), y)
-                # loss = criterion(F.sigmoid(outputs), y) + nn.BCEWithLogitsLoss()(outputs, y)
-            else:
-                loss = self.criterion(outputs, y)
+    #     probs = F.sigmoid(outputs) if self.Config.USE_VISLOGGER else None
 
-        if self.Config.EXPERIMENT_TYPE == "peak_regression":
-            f1 = metric_utils.calc_peak_length_dice_pytorch(self.Config.CLASSES, outputs.detach(), y.detach(),
-                                                            max_angle_error=self.Config.PEAK_DICE_THR,
-                                                            max_length_error=self.Config.PEAK_DICE_LEN_THR)
-        elif self.Config.EXPERIMENT_TYPE == "dm_regression":
-            f1 = pytorch_utils.f1_score_macro(y.detach() > self.Config.THRESHOLD, outputs.detach(),
-                                              per_class=True, threshold=self.Config.THRESHOLD)
-        else:
-            f1 = pytorch_utils.f1_score_macro(y.detach(), F.sigmoid(outputs).detach(), per_class=True,
-                                              threshold=self.Config.THRESHOLD)
+    #     metrics = {}
+    #     metrics["loss"] = loss.item()
+    #     metrics["f1_macro"] = f1
+    #     metrics["angle_err"] = angle_err if angle_err is not None else 0
 
-        if self.Config.USE_VISLOGGER:
-            probs = F.sigmoid(outputs)
-        else:
-            probs = None  # faster
-
-        metrics = {}
-        metrics["loss"] = loss.item()
-        metrics["f1_macro"] = f1
-        metrics["angle_err"] = angle_err if angle_err is not None else 0
-
-        return probs, metrics
+    #     for i, bundle_name in enumerate(dataset_specific_utils.get_bundle_names(self.Config.CLASSES)[1:]):
+    #         metrics['f1_macro_tract_' + bundle_name] = f1[i]
+    #     return probs, metrics
 
 
     def predict(self, X):
-        with torch.no_grad():
-            X = torch.tensor(X, dtype=torch.float32).contiguous().to(self.device)
+        X = torch.tensor(X, dtype=torch.float32).contiguous().to(self.device)
 
         if self.Config.DROPOUT_SAMPLING:
             self.net.train()
         else:
             self.net.train(False)
-
-        if self.Config.MODEL == 'MASAM':
-            outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1])
-            outputs = outputs['low_res_logits']
-        else:
-            outputs = self.net(X)  # forward
-        if self.Config.EXPERIMENT_TYPE == "peak_regression" or self.Config.EXPERIMENT_TYPE == "dm_regression":
-            probs = outputs.detach().cpu().numpy()
-        else:
-            probs = F.sigmoid(outputs).detach().cpu().numpy()
+            
+        with torch.no_grad():
+            if self.Config.MODEL == 'MASAM':
+                outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1])
+                outputs = outputs['low_res_logits']
+            else:
+                outputs = self.net(X)  # forward
+        probs = F.sigmoid(outputs).detach().cpu().numpy()
 
         if self.Config.DIM == "2D":
             probs = probs.transpose(0, 2, 3, 1)  # (bs, x, y, classes)
@@ -446,90 +486,3 @@ class BaseModel:
         for param_group in self.optimizer.param_groups:
             exp_utils.print_and_save(self.Config.EXP_PATH, "current learning rate: {}".format(param_group['lr']))
 
-
-
-# https://github.com/katsura-jp/pytorch-cosine-annealing-with-warmup
-class CosineAnnealingWarmUpRestarts(_LRScheduler):
-    """
-        optimizer (Optimizer): Wrapped optimizer.
-        first_cycle_steps (int): First cycle step size.
-        cycle_mult(float): Cycle steps magnification. Default: -1.
-        max_lr(float): First cycle's max learning rate. Default: 0.1.
-        min_lr(float): Min learning rate. Default: 0.001.
-        warmup_steps(int): Linear warmup step size. Default: 0.
-        gamma(float): Decrease rate of max learning rate by cycle. Default: 1.
-        last_epoch (int): The index of last epoch. Default: -1.
-    """
-    
-    def __init__(self,
-                 optimizer : torch.optim.Optimizer,
-                 first_cycle_steps : int,
-                 cycle_mult : float = 1.,
-                 max_lr : float = 0.1,
-                 min_lr : float = 0.001,
-                 warmup_steps : int = 0,
-                 gamma : float = 1.,
-                 last_epoch : int = -1
-        ):
-        assert warmup_steps < first_cycle_steps
-        
-        self.first_cycle_steps = first_cycle_steps # first cycle step size
-        self.cycle_mult = cycle_mult # cycle steps magnification
-        self.base_max_lr = max_lr # first max learning rate
-        self.max_lr = max_lr # max learning rate in the current cycle
-        self.min_lr = min_lr # min learning rate
-        self.warmup_steps = warmup_steps # warmup step size
-        self.gamma = gamma # decrease rate of max learning rate by cycle
-        
-        self.cur_cycle_steps = first_cycle_steps # first cycle step size
-        self.cycle = 0 # cycle count
-        self.step_in_cycle = last_epoch # step size of the current cycle
-        
-        super(CosineAnnealingWarmUpRestarts, self).__init__(optimizer, last_epoch)
-        
-        # set learning rate min_lr
-        self.init_lr()
-    
-    def init_lr(self):
-        self.base_lrs = []
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.min_lr
-            self.base_lrs.append(self.min_lr)
-    
-    def get_lr(self):
-        if self.step_in_cycle == -1:
-            return self.base_lrs
-        elif self.step_in_cycle < self.warmup_steps:
-            return [(self.max_lr - base_lr)*self.step_in_cycle / self.warmup_steps + base_lr for base_lr in self.base_lrs]
-        else:
-            return [base_lr + (self.max_lr - base_lr) \
-                    * (1 + math.cos(math.pi * (self.step_in_cycle-self.warmup_steps) \
-                                    / (self.cur_cycle_steps - self.warmup_steps))) / 2
-                    for base_lr in self.base_lrs]
-
-    def step(self, epoch=None):
-        if epoch is None:
-            epoch = self.last_epoch + 1
-            self.step_in_cycle = self.step_in_cycle + 1
-            if self.step_in_cycle >= self.cur_cycle_steps:
-                self.cycle += 1
-                self.step_in_cycle = self.step_in_cycle - self.cur_cycle_steps
-                self.cur_cycle_steps = int((self.cur_cycle_steps - self.warmup_steps) * self.cycle_mult) + self.warmup_steps
-        else:
-            if epoch >= self.first_cycle_steps:
-                if self.cycle_mult == 1.:
-                    self.step_in_cycle = epoch % self.first_cycle_steps
-                    self.cycle = epoch // self.first_cycle_steps
-                else:
-                    n = int(math.log((epoch / self.first_cycle_steps * (self.cycle_mult - 1) + 1), self.cycle_mult))
-                    self.cycle = n
-                    self.step_in_cycle = epoch - int(self.first_cycle_steps * (self.cycle_mult ** n - 1) / (self.cycle_mult - 1))
-                    self.cur_cycle_steps = self.first_cycle_steps * self.cycle_mult ** (n)
-            else:
-                self.cur_cycle_steps = self.first_cycle_steps
-                self.step_in_cycle = epoch
-                
-        self.max_lr = self.base_max_lr * (self.gamma**self.cycle)
-        self.last_epoch = math.floor(epoch)
-        for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
-            param_group['lr'] = lr

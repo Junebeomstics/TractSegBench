@@ -29,7 +29,7 @@ class Config(BaseConfig):
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
-    WEIGHTS_PATH = "//global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_h_4b8939.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
+    WEIGHTS_PATH = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_h_4b8939.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
     # "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_b_01ec64.pth"
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_h_4b8939.pth
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth

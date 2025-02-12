@@ -4,6 +4,32 @@ import numpy as np
 from scipy import ndimage
 from os.path import join
 import nibabel as nib
+import random
+
+from batchgenerators.transforms.resample_transforms import ResampleTransform
+from batchgenerators.transforms.resample_transforms import SimulateLowResolutionTransform
+from batchgenerators.transforms.noise_transforms import GaussianNoiseTransform
+from batchgenerators.transforms.noise_transforms import GaussianBlurTransform
+from batchgenerators.transforms.spatial_transforms import SpatialTransform
+from batchgenerators.transforms.spatial_transforms import ZoomTransform
+from batchgenerators.transforms.spatial_transforms import ResizeTransform
+from batchgenerators.transforms.spatial_transforms import MirrorTransform
+from batchgenerators.transforms.utility_transforms import NumpyToTensor
+from batchgenerators.transforms.abstract_transforms import Compose
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
+from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
+from batchgenerators.augmentations.utils import pad_nd_image
+from batchgenerators.augmentations.utils import center_crop_2D_image_batched
+from batchgenerators.augmentations.crop_and_pad_augmentations import crop
+from batchgenerators.augmentations.spatial_transformations import augment_zoom
+
+# from batchgenerators.transforms.sample_normalization_transforms import ZeroMeanUnitVarianceTransform
+from tractseg.data.DLDABG_standalone import ZeroMeanUnitVarianceTransform as ZeroMeanUnitVarianceTransform_Standalone
+
+from tractseg.data.custom_transformations import ResampleTransformLegacy
+from tractseg.data.custom_transformations import FlipVectorAxisTransform
+from tractseg.data.spatial_transform_peaks import SpatialTransformPeaks
+from tractseg.data.spatial_transform_custom import SpatialTransformCustom
 
 class MRISliceDataset(Dataset):
     def __init__(self, config, subjects, transform=None):
@@ -15,7 +41,7 @@ class MRISliceDataset(Dataset):
         return len(self.subjects)
 
     def __getitem__(self, idx):
-        subject = self.subjects[idx] # randomly choose one subject
+        subject = self.subjects[idx] 
         data, seg = self.load_subject_data(subject)
 
         # Convert peaks to tensors if tensor model
@@ -23,21 +49,19 @@ class MRISliceDataset(Dataset):
             data = self.peaks_to_tensors(data)
 
         slice_direction = self.slice_dir_to_int(self.config.TRAINING_SLICE_DIRECTION) # randomly choose on slice direction
-        slice_idxs = self.get_random_slices(data, slice_direction, batch_size=self.config.BATCH_SIZE) # sample as much as batch size
+        slice_idxs = self.get_random_slices(data, slice_direction, nr_slices=self.config.NR_SLICES) # sample as much as batch size
 
-        if self.config.NR_SLICES > 1:
-            x, y = self.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction, slice_window=self.config.NR_SLICES)
-        else:
-            x, y = self.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction)
+        # if self.config.NR_SLICES > 1:
+        #     x, y = self.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction, slice_window=self.config.NR_SLICES)
+        # else:
+        x, y = self.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction)
 
         if self.config.PAD_TO_SQUARE:
             #Crop and pad to input size
-            x, y = crop(x, y, crop_size=self.Config.INPUT_DIM)  # does not work with img with batches and channels
+            #print(x.shape,y.shape) # (1, 9, 109, 114) (1, 72, 109, 114) (it can change)
+            x, y = crop(x, y, crop_size=self.config.INPUT_DIM)  # does not work with img with batches and channels
+            #print(x.shape,y.shape) # (1, 9, 144, 144) (1, 72, 144, 144)
         else:
-            # Works -> results as good?
-            # Will pad each axis to be multiple of 16. (Each sample can end up having different dimensions. Also x and y
-            # can be different)
-            # This is needed for Schizo dataset
             x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
             y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
 
@@ -46,11 +70,12 @@ class MRISliceDataset(Dataset):
 
         # Apply transformations
         if self.transform:
-            x,y = self._augment_data(x, y)
-
-        data_dict = {"data": x,  # (batch_size, channels, x, y, [z])
-                     "seg": y,
-                     "slice_dir": self.slice_direction}  # (batch_size, channels, x, y, [z])
+            output= self.transform(**{'data':x, 'seg':y})
+        
+        data_dict = {"subject": subject,
+                     "data": output['data'],  # (nr_slices, channels, x, y, [z])
+                     "seg": output['seg'], # (nr_slices, channels, x, y, [z])
+                     "slice_dir": slice_direction}  
 
         return data_dict
 
@@ -73,57 +98,15 @@ class MRISliceDataset(Dataset):
             seg = load(join(self.config.DATA_PATH, self.config.DATASET_FOLDER, subject, self.config.LABELS_FILENAME))
         return data, seg
 
-    def get_random_slices(self, data, slice_direction, batch_size):
+    def get_random_slices(self, data, slice_direction, nr_slices):
         slice_dim = data.shape[slice_direction]
 
-        if data.shape[slice_direction] <= batch_size:
+        if data.shape[slice_direction] <= nr_slices:
             print("INFO: Batch size bigger than nr of slices. Therefore sampling with replacement.")
-            return np.random.choice(slice_dim, batch_size, replace=True)
+            return np.random.choice(slice_dim, nr_slices, replace=True)
         else:
-            return np.random.choice(slice_dim, batch_size, replace=False)
+            return np.random.choice(slice_dim, nr_slices, replace=False)
 
-    def sample_Xslices(self, data, seg, slice_idxs, slice_direction, slice_window, labels_type=np.int16):
-        """
-        Sample slices but add slices_window/2 above and below.
-        """
-        sw = slice_window  # slice_window (only odd numbers allowed)
-        assert sw % 2 == 1, "Slice_window has to be an odd number"
-        pad = int((sw - 1) / 2)
-
-        if slice_direction == 0:
-            y = seg[slice_idxs, :, :].astype(labels_type)
-            y = np.array(y).transpose(0, 3, 1, 2)  # nr_classes channel has to be before with and height for DataAugmentation (bs, nr_of_classes, x, y)
-        elif slice_direction == 1:
-            y = seg[:, slice_idxs, :].astype(labels_type)
-            y = np.array(y).transpose(1, 3, 0, 2)
-        elif slice_direction == 2:
-            y = seg[:, :, slice_idxs].astype(labels_type)
-            y = np.array(y).transpose(2, 3, 0, 1)
-
-        data_pad = np.zeros((data.shape[0] + sw - 1, data.shape[1] + sw - 1, data.shape[2] + sw - 1, data.shape[3])).astype(
-            data.dtype)
-        data_pad[pad:-pad, pad:-pad, pad:-pad, :] = data  # padded with two slices of zeros on all sides
-        batch = []
-        for s_idx in slice_idxs:
-            if slice_direction == 0:
-                # (s_idx+2)-2:(s_idx+2)+3 = s_idx:s_idx+5
-                x = data_pad[s_idx:s_idx + sw:, pad:-pad, pad:-pad, :].astype(np.float32)  # (5, y, z, channels)
-                x = np.array(x).transpose(0, 3, 1, 2)  # channels dim has to be before width and height for Unet (but after batches)
-                x = np.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))  # (5*channels, y, z)
-                batch.append(x)
-            elif slice_direction == 1:
-                x = data_pad[pad:-pad, s_idx:s_idx + sw, pad:-pad, :].astype(np.float32)  # (5, y, z, channels)
-                x = np.array(x).transpose(1, 3, 0, 2)
-                x = np.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))  # (5*channels, y, z)
-                batch.append(x)
-            elif slice_direction == 2:
-                x = data_pad[pad:-pad, pad:-pad, s_idx:s_idx + sw, :].astype(np.float32)  # (5, y, z, channels)
-                x = np.array(x).transpose(2, 3, 0, 1)
-                x = np.reshape(x, (x.shape[0] * x.shape[1], x.shape[2], x.shape[3]))  # (5*channels, y, z)
-                batch.append(x)
-
-        return np.array(batch), y  # (bs, channels, x, y)
-    
     def sample_slices(self, data, seg, slice_idxs, slice_direction=0, labels_type=np.int16):
         if slice_direction == 0:
             x = data[slice_idxs, :, :].astype(np.float32)  # (bs, y, z, channels)
@@ -148,6 +131,7 @@ class MRISliceDataset(Dataset):
     def slice_dir_to_int(slice_dir):
         if slice_dir == "xyz":
             slice_direction_int = int(round(random.uniform(0, 2)))
+            return slice_direction_int
         elif slice_dir == "x":
             return 0
         elif slice_dir == "y":
@@ -184,84 +168,81 @@ class MRISliceDataset(Dataset):
             tensor[..., idx*6:(idx*6)+6] = _peak_to_tensor(peaks[..., idx*3:(idx*3)+3])
         return tensor
 
-    def _augment_data(self, batch_generator, type=None):
-        tfs = []
+        
+def transform_data(Config, type):
+    tfs=[]
+    if Config.NORMALIZE_DATA:
+        # todo: Use original transform as soon as bug fixed in batchgenerators
+        # tfs.append(ZeroMeanUnitVarianceTransform(per_channel=self.Config.NORMALIZE_PER_CHANNEL))
+        tfs.append(ZeroMeanUnitVarianceTransform_Standalone(per_channel=Config.NORMALIZE_PER_CHANNEL))
 
-        if self.Config.NORMALIZE_DATA:
-            # todo: Use original transform as soon as bug fixed in batchgenerators
-            # tfs.append(ZeroMeanUnitVarianceTransform(per_channel=self.Config.NORMALIZE_PER_CHANNEL))
-            tfs.append(ZeroMeanUnitVarianceTransform_Standalone(per_channel=self.Config.NORMALIZE_PER_CHANNEL))
+    if Config.SPATIAL_TRANSFORM == "SpatialTransformPeaks":
+        SpatialTransformUsed = SpatialTransformPeaks
+    elif Config.SPATIAL_TRANSFORM == "SpatialTransformCustom":
+        SpatialTransformUsed = SpatialTransformCustom
+    else:
+        SpatialTransformUsed = SpatialTransform
 
-        if self.Config.SPATIAL_TRANSFORM == "SpatialTransformPeaks":
-            SpatialTransformUsed = SpatialTransformPeaks
-        elif self.Config.SPATIAL_TRANSFORM == "SpatialTransformCustom":
-            SpatialTransformUsed = SpatialTransformCustom
-        else:
-            SpatialTransformUsed = SpatialTransform
+    if Config.DATA_AUGMENTATION:
+        if type == "train":
+            # patch_center_dist_from_border:
+            #   if 144/2=72 -> always exactly centered; otherwise a bit off center
+            #   (brain can get off image and will be cut then)
+            if Config.DAUG_SCALE:
+                if Config.INPUT_RESCALING:
+                    source_mm = 2  # for bb
+                    target_mm = float(Config.RESOLUTION[:-2])
+                    scale_factor = target_mm / source_mm
+                    scale = (scale_factor, scale_factor)
+                else:
+                    scale = (0.9, 1.5)
 
-        if self.Config.DATA_AUGMENTATION:
-            if type == "train":
-                # patch_center_dist_from_border:
-                #   if 144/2=72 -> always exactly centered; otherwise a bit off center
-                #   (brain can get off image and will be cut then)
-                if self.Config.DAUG_SCALE:
+                if Config.PAD_TO_SQUARE:
+                    patch_size = Config.INPUT_DIM
+                else:
+                    patch_size = None  # keeps dimensions of the data
 
-                    if self.Config.INPUT_RESCALING:
-                        source_mm = 2  # for bb
-                        target_mm = float(self.Config.RESOLUTION[:-2])
-                        scale_factor = target_mm / source_mm
-                        scale = (scale_factor, scale_factor)
-                    else:
-                        scale = (0.9, 1.5)
+                # spatial transform automatically crops/pads to correct size
+                center_dist_from_border = int(Config.INPUT_DIM[0] / 2.) - 10  # (144,144) -> 62
+                tfs.append(SpatialTransformUsed(patch_size,
+                                            patch_center_dist_from_border=center_dist_from_border,
+                                            do_elastic_deform=Config.DAUG_ELASTIC_DEFORM,
+                                            alpha=Config.DAUG_ALPHA, sigma=Config.DAUG_SIGMA,
+                                            do_rotation=Config.DAUG_ROTATE,
+                                            angle_x=Config.DAUG_ROTATE_ANGLE,
+                                            angle_y=Config.DAUG_ROTATE_ANGLE,
+                                            angle_z=Config.DAUG_ROTATE_ANGLE,
+                                            do_scale=True, scale=scale, border_mode_data='constant',
+                                            border_cval_data=0,
+                                            order_data=3,
+                                            border_mode_seg='constant', border_cval_seg=0,
+                                            order_seg=0, random_crop=True,
+                                            p_el_per_sample=Config.P_SAMP,
+                                            p_rot_per_sample=Config.P_SAMP,
+                                            p_scale_per_sample=Config.P_SAMP))
 
-                    if self.Config.PAD_TO_SQUARE:
-                        patch_size = self.Config.INPUT_DIM
-                    else:
-                        patch_size = None  # keeps dimensions of the data
+            if Config.DAUG_RESAMPLE:
+                tfs.append(SimulateLowResolutionTransform(zoom_range=(0.5, 1), p_per_sample=0.2, per_channel=False))
 
-                    # spatial transform automatically crops/pads to correct size
-                    center_dist_from_border = int(self.Config.INPUT_DIM[0] / 2.) - 10  # (144,144) -> 62
-                    tfs.append(SpatialTransformUsed(patch_size,
-                                                patch_center_dist_from_border=center_dist_from_border,
-                                                do_elastic_deform=self.Config.DAUG_ELASTIC_DEFORM,
-                                                alpha=self.Config.DAUG_ALPHA, sigma=self.Config.DAUG_SIGMA,
-                                                do_rotation=self.Config.DAUG_ROTATE,
-                                                angle_x=self.Config.DAUG_ROTATE_ANGLE,
-                                                angle_y=self.Config.DAUG_ROTATE_ANGLE,
-                                                angle_z=self.Config.DAUG_ROTATE_ANGLE,
-                                                do_scale=True, scale=scale, border_mode_data='constant',
-                                                border_cval_data=0,
-                                                order_data=3,
-                                                border_mode_seg='constant', border_cval_seg=0,
-                                                order_seg=0, random_crop=True,
-                                                p_el_per_sample=self.Config.P_SAMP,
-                                                p_rot_per_sample=self.Config.P_SAMP,
-                                                p_scale_per_sample=self.Config.P_SAMP))
+            if Config.DAUG_RESAMPLE_LEGACY:
+                tfs.append(ResampleTransformLegacy(zoom_range=(0.5, 1)))
 
-                if self.Config.DAUG_RESAMPLE:
-                    tfs.append(SimulateLowResolutionTransform(zoom_range=(0.5, 1), p_per_sample=0.2, per_channel=False))
+            if Config.DAUG_GAUSSIAN_BLUR:
+                tfs.append(GaussianBlurTransform(blur_sigma=Config.DAUG_BLUR_SIGMA,
+                                                 different_sigma_per_channel=False,
+                                                 p_per_sample=Config.P_SAMP))
 
-                if self.Config.DAUG_RESAMPLE_LEGACY:
-                    tfs.append(ResampleTransformLegacy(zoom_range=(0.5, 1)))
+            if Config.DAUG_NOISE:
+                tfs.append(GaussianNoiseTransform(noise_variance=Config.DAUG_NOISE_VARIANCE,
+                                                  p_per_sample=Config.P_SAMP))
 
-                if self.Config.DAUG_GAUSSIAN_BLUR:
-                    tfs.append(GaussianBlurTransform(blur_sigma=self.Config.DAUG_BLUR_SIGMA,
-                                                     different_sigma_per_channel=False,
-                                                     p_per_sample=self.Config.P_SAMP))
+            if Config.DAUG_MIRROR:
+                tfs.append(MirrorTransform())
 
-                if self.Config.DAUG_NOISE:
-                    tfs.append(GaussianNoiseTransform(noise_variance=self.Config.DAUG_NOISE_VARIANCE,
-                                                      p_per_sample=self.Config.P_SAMP))
-
-                if self.Config.DAUG_MIRROR:
-                    tfs.append(MirrorTransform())
-
-                if self.Config.DAUG_FLIP_PEAKS:
-                    tfs.append(FlipVectorAxisTransform())
-
-        tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
-
-        #num_cached_per_queue 1 or 2 does not really make a difference
-        batch_gen = MultiThreadedAugmenter(batch_generator, Compose(tfs), num_processes=num_processes,
-                                           num_cached_per_queue=1, seeds=None, pin_memory=True)
-        return batch_gen  # data: (batch_size, channels, x, y), seg: (batch_size, channels, x, y)
+            if Config.DAUG_FLIP_PEAKS:
+                tfs.append(FlipVectorAxisTransform())
+        
+        # if self.Config.RESIZE_TO_512:
+        #     tfs.append(ResizeTransform(target_size=512, order=3, order_seg=0))
+    tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
+    return tfs

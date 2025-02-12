@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import torch
 import numpy as np
 from sklearn.metrics import f1_score
 from sklearn.linear_model import LinearRegression
@@ -164,6 +165,11 @@ def calculate_metrics_onlyLoss(metrics, loss, type="train"):
 
 
 def calculate_metrics_each_bundle(metrics, y, class_probs, bundles, f1=None, threshold=0.5):
+    if isinstance(y, torch.Tensor):
+        y = y.cpu().numpy()
+    if isinstance(class_probs, torch.Tensor):
+        class_probs = class_probs.cpu().numpy()
+
     if f1 is None:
         pred_class = (class_probs >= threshold).astype(np.int16)
         y = (y >= threshold).astype(np.int16)

@@ -73,6 +73,7 @@ def main():
     parser.add_argument("--with_id", type=str, default=None, help="Neptune run id")
     parser.add_argument("--weights_path", type=str, default="", help="path to weights if not using path in Config")
     parser.add_argument("--use_dp", action="store_true", help="whether to activate DataParallel")
+    parser.add_argument("--use_ddp", action="store_true", help="whether to activate DistributedDataParallel")
     args = parser.parse_args()
 
     run = neptune.init_run(
@@ -174,14 +175,14 @@ def main():
     # Define model
     model = BaseModel(Config)
 
-    if Config.DIM == "2D":
-        data_loader = DataLoaderTraining2D(Config) 
-    else:
-        data_loader = DataLoaderTraining3D(Config)
+#    if Config.DIM == "2D":
+#        data_loader = DataLoaderTraining2D(Config) 
+#    else:
+#        data_loader = DataLoaderTraining3D(Config)
 
     if Config.TRAIN:
         print("Training...")
-        trainer.train_model(Config, model, data_loader, run, scheduler=scheduler)
+        trainer.train_model(Config, model, run, scheduler=scheduler)
         # run["train/loss"].append(0.9 ** epoch) # <- why??, which means epoch here?
 
     # After Training
@@ -202,16 +203,16 @@ def main():
         for subject in all_subjects:
             print("Get_segmentation subject {}".format(subject))
 
-            if Config.EXPERIMENT_TYPE == "peak_regression":
-                data_loader = DataLoaderInference(Config, subject=subject)
-                img_probs, img_y = trainer.predict_img(Config, model_test, data_loader,
-                                                       probs=True)  # only x or y or z
-                img_seg = peak_utils.peak_image_to_binary_mask(img_probs,
-                                                              len_thr=0.4)  # thr: 0.4 slightly better than 0.2
-            else:
+            # if Config.EXPERIMENT_TYPE == "peak_regression":
+            #    data_loader = DataLoaderInference(Config, subject=subject)
+            #    img_probs, img_y = trainer.predict_img(Config, model_test, data_loader,
+            #                                           probs=True)  # only x or y or z
+            #    img_seg = peak_utils.peak_image_to_binary_mask(img_probs,
+            #                                                  len_thr=0.4)  # thr: 0.4 slightly better than 0.2
+            #else:
                 # returns probs not binary seg
-                img_seg, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject)
-                img_seg = direction_merger.mean_fusion(Config.THRESHOLD, img_seg, probs=False)
+            img_seg, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject)
+            img_seg = direction_merger.mean_fusion(Config.THRESHOLD, img_seg, probs=False)
 
             img = nib.Nifti1Image(img_seg.astype(np.uint8),
                                   dataset_specific_utils.get_dwi_affine(Config.DATASET, Config.RESOLUTION))
@@ -227,23 +228,23 @@ def main():
             print("Get_probs subject {}".format(subject))
             data_loader = DataLoaderInference(Config, subject=subject)
 
-            if Config.EXPERIMENT_TYPE == "peak_regression":
-                img_probs, img_y = trainer.predict_img(Config, model_test, data_loader, probs=True)
-                img_probs = peak_utils.remove_small_peaks(img_probs, len_thr=0.4)
-            else:
-                img_probs, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject=subject)
-                img_probs = direction_merger.mean_fusion(Config.THRESHOLD, img_probs, probs=True)
+            #if Config.EXPERIMENT_TYPE == "peak_regression":
+            #    img_probs, img_y = trainer.predict_img(Config, model_test, data_loader, probs=True)
+            #    img_probs = peak_utils.remove_small_peaks(img_probs, len_thr=0.4)
+            #else:
+            img_probs, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject=subject)
+            img_probs = direction_merger.mean_fusion(Config.THRESHOLD, img_probs, probs=True)
 
             img = nib.Nifti1Image(img_probs, dataset_specific_utils.get_dwi_affine(Config.DATASET, Config.RESOLUTION))
             nib.save(img, join(Config.EXP_PATH, "probmaps", subject + "_peak.nii.gz"))
 
-    eval_script_path = join(os.path.expanduser("~"), "dev/bsp/eval_nonHCP.py")
-    if os.path.exists(eval_script_path) and not Config.ONLY_VAL and not Config.TEST:
-        print("Evaluating on non HCP data...")
-        # Free GPU memory  (2.5GB remaining otherwise)
-        del model, model_test
-        torch.cuda.empty_cache()
-        os.system("python " + eval_script_path + " " + Config.EXP_NAME)
+    # eval_script_path = join(os.path.expanduser("~"), "dev/bsp/eval_nonHCP.py")
+    # if os.path.exists(eval_script_path) and not Config.ONLY_VAL and not Config.TEST:
+    #     print("Evaluating on non HCP data...")
+    #     # Free GPU memory  (2.5GB remaining otherwise)
+    #     del model, model_test
+    #     torch.cuda.empty_cache()
+    #     os.system("python " + eval_script_path + " " + Config.EXP_NAME)
  
 if __name__ == '__main__':
     main()

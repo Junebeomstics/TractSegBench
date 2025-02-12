@@ -19,10 +19,14 @@ from tractseg.libs import metric_utils
 from tractseg.libs import plot_utils
 from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils
-from tractseg.data.datasets import MRISliceDataset
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 import torch
+
+# new
+from tractseg.data.datasets import MRISliceDataset, transform_data
+from torch.utils.data import Dataset, DataLoader
+from batchgenerators.transforms.abstract_transforms import Compose
 
 def _get_weights_for_this_epoch(Config, epoch_nr):
     if Config.LOSS_WEIGHT is None:
@@ -39,56 +43,46 @@ def _get_weights_for_this_epoch(Config, epoch_nr):
         exp_utils.print_and_save(Config.EXP_PATH, "Current weight_factor: {}".format(weight_factor))
     return weight_factor
 
-
 def _update_metrics(calc_f1, experiment_type, metric_types, metrics, metr_batch, type):
     if calc_f1:
-        if experiment_type == "peak_regression":
-            peak_f1_mean = np.array([s.to('cpu') for s in list(metr_batch["f1_macro"].values())]).mean()
-            metr_batch["f1_macro"] = peak_f1_mean
+        metr_batch["f1_macro"] = np.mean(metr_batch["f1_macro"])
 
-            metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
-
-        else: # belong to here
-            metr_batch["f1_macro"] = np.mean(metr_batch["f1_macro"])
-            metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
-
+        metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
     else:
         metrics = metric_utils.calculate_metrics_onlyLoss(metrics, metr_batch["loss"], type=type)
     return metrics
 
-
-def train_model(Config, model, data_loader, run, scheduler=None):
-
-    # if Config.USE_VISLOGGER:
-    #     try:
-    #         from trixi.logger.visdom import PytorchVisdomLogger
-    #     except ImportError:
-    #         pass
-    #     trixi = PytorchVisdomLogger(port=8080, auto_start=True)
-
-    # exp_utils.print_and_save(Config.EXP_PATH, socket.gethostname())
-
+def train_model(Config, model, run, scheduler=None):
     epoch_times = []
     nr_of_updates = 0
 
     metrics = {}
-    for type in ["train", "test", "validate"]:
+    for type in ["train","validate", "test"]:
         for metric in Config.METRIC_TYPES:
             metrics[metric + "_" + type] = [0]
-
-    # if torch.cuda.device_count() > 1 and Config.USE_DP:
-    #     Config.BATCH_SIZE = Config.BATCH_SIZE * torch.cuda.device_count() 
-
+        # initialize f1 macro metrics for each bundle
+        if Config.LOG_PER_BUNDLE:
+            for i, bundle_name in enumerate(dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:]):
+                metrics[f'bundle_{bundle_name}_f1_{type}' ] = [0]
+                Config.METRIC_TYPES.append(f'bundle_{bundle_name}_f1')
+    
     # Define dataloaders 
-    batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
-                                                      subjects=getattr(Config, "TRAIN_SUBJECTS"))
-    batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
-                                                    subjects=getattr(Config, "VALIDATE_SUBJECTS"))
+    #batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
+                                                      # subjects=getattr(Config, "TRAIN_SUBJECTS"))
+    #batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
+                                                    # subjects=getattr(Config, "VALIDATE_SUBJECTS"))
 
-    # train_dataset = MRISliceDataset(config=Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=True)
-    # val_dataset = MRISliceDataset(config=Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=False)
-    # train_dataloader = DataLoader(train_dataset, batch_size=1)
-    # val_dataloader = DataLoader(val_dataset, batch_size=1)
+
+    tfs_train = Compose(transform_data(Config, type='train'))
+    tfs_val = Compose(transform_data(Config, type='val'))
+    
+    train_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=tfs_train)
+    val_dataset = MRISliceDataset(Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=tfs_val)
+    test_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TEST_SUBJECTS"), transform=tfs_val)
+    
+    batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+    batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
     for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
@@ -96,7 +90,7 @@ def train_model(Config, model, data_loader, run, scheduler=None):
         timings = defaultdict(lambda: 0)
         batch_nr = defaultdict(lambda: 0)
         weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
-        types = ["validate"] if Config.ONLY_VAL else ["train", "validate"]
+        types = ["validate"] if Config.ONLY_VAL else ["train", "validate", "test"]
 
         for type in types:
             print_loss = []
@@ -107,21 +101,28 @@ def train_model(Config, model, data_loader, run, scheduler=None):
                 nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
 
             # *Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)
-            nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
+            # if type == "train":
+            #     nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
+            # else:
+            #     nr_batches = int(int(nr_of_samples / Config.VAL_BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
 
-            print("Start looping batches...")
+            print(f"Start looping {type} batches in epoch {epoch_nr}...")
             start_time_batch_part = time.time()
-            for i in range(nr_batches):
-                batch = next(batch_gen_train) if type == "train" else next(batch_gen_val)
+            #for i in range(nr_batches):
+            if type == "train":
+                loader = batch_gen_train
+            elif type == "validate":
+                loader = batch_gen_val
+            elif type == "test":
+                loader = batch_gen_test   
 
+            for batch in loader:
                 start_time_data_preparation = time.time()
                 batch_nr[type] += 1
 
+                subject = batch["subject"]
                 x = batch["data"]  # (bs, nr_of_channels, x, y)
                 y = batch["seg"]  # (bs, nr_of_classes, x, y)
-
-                # print('model_input x.shape:',x.shape) # torch.Size([bs, 9 (channel), 144, 144])
-                # print('model_input y.shape:',y.shape) # torch.Size([bs, 72, 144, 144])
 
                 if Config.MODEL == "LatentDiffusionModel":
                     # Sample random timesteps
@@ -137,17 +138,13 @@ def train_model(Config, model, data_loader, run, scheduler=None):
 
                 timings["data_preparation_time"] += time.time() - start_time_data_preparation
                 start_time_network = time.time()
-                if type == "train":
-                    nr_of_updates += 1
-                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps)
-                elif type == "validate":
-                    probs, metr_batch = model.test(x, y, weight_factor=weight_factor)
-                elif type == "test":
-                    probs, metr_batch = model.test(x, y, weight_factor=weight_factor)
+                nr_of_updates += 1
+                
+                # base_model
+                probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
                 timings["network_time"] += time.time() - start_time_network
 
                 start_time_metrics = time.time()
-                # metrics
                 metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
                                           metrics, metr_batch, type)
                 timings["metrics_time"] += time.time() - start_time_metrics
@@ -174,8 +171,11 @@ def train_model(Config, model, data_loader, run, scheduler=None):
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["train"], type="train")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
 
+        # Log metrics
         for key,value in metrics.items():
             run[key].log(metrics[key][-1])
+        
+        # Log learning rate
         run['learning_rate'].log(model.optimizer.param_groups[0]['lr'])
         print("  Epoch {}, Average Epoch loss = {}".format(epoch_nr, metrics["loss_train"][-1]))
         # exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
@@ -198,28 +198,6 @@ def train_model(Config, model, data_loader, run, scheduler=None):
             model.save_model(metrics, epoch_nr, mode=Config.BEST_EPOCH_SELECTION)
         timings["saving_time"] += time.time() - start_time_saving
 
-        # Create Plots
-        # start_time_plotting = time.time()
-        # pickle.dump(metrics, open(join(Config.EXP_PATH, "metrics.pkl"), "wb"))
-        # plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME,
-        #                            keys=["loss", "f1_macro"],
-        #                            types=["train", "validate"],
-        #                            selected_ax=["loss", "f1"],
-        #                            fig_name="metrics_all.png")
-        # plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
-        #                            keys=["loss", "f1_macro"],
-        #                            types=["train", "validate"],
-        #                            selected_ax=["loss", "f1"],
-        #                            fig_name="metrics.png")
-        # if "angle_err" in Config.METRIC_TYPES:
-        #     plot_utils.create_exp_plot(metrics, Config.EXP_PATH, Config.EXP_NAME, without_first_epochs=True,
-        #                                keys=["loss", "angle_err"],
-        #                                types=["train", "validate"],
-        #                                selected_ax=["loss", "f1"],
-        #                                fig_name="metrics_angle.png")
-
-        # timings["plotting_time"] += time.time() - start_time_plotting
-
         epoch_time = time.time() - start_time
         epoch_times.append(epoch_time)
 
@@ -232,10 +210,6 @@ def train_model(Config, model, data_loader, run, scheduler=None):
         # Adding next Epoch
         if epoch_nr < Config.NUM_EPOCHS-1:
             metrics = metric_utils.add_empty_element(metrics)
-
-    # with open(join(Config.EXP_PATH, "Hyperparameters.txt"), "a") as f:
-    #     f.write("\n\nAverage Epoch time: {}s".format(sum(epoch_times) / float(len(epoch_times))))
-    
         
 def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=True, only_prediction=False,
                 batch_size=1, unit_test=False):

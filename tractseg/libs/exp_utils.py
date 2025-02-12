@@ -32,7 +32,7 @@ def create_experiment_folder(experiment_name, multi_parent_path, train):
         else:
             sys.exit('Testing target directory does not exist!')
     else:
-        for i in range(40):
+        for i in range(100):
             if os.path.exists(dir):
                 tailing_numbers = re.findall('x([0-9]+)$', experiment_name)  # find tailing numbers that start with a x
                 if len(tailing_numbers) > 0:
@@ -180,3 +180,20 @@ def load_config_from_txt(path):
     config_dict = ast.literal_eval(clean_str)
     config_obj = Struct(**config_dict)
     return config_obj
+
+def sizeof_number(number, currency=None):
+    """
+    format values per thousands : K-thousands, M-millions, B-billions. 
+    
+    parameters:
+    -----------
+    number is the number you want to format
+    currency is the prefix that is displayed if provided (€, $, £...)
+    
+    """
+    currency='' if currency is None else currency + ' '
+    for unit in ['','K','M']:
+        if abs(number) < 1000.0:
+            return f"{currency}{number:6.2f}{unit}"
+        number /= 1000.0
+    return f"{currency}{number:6.2f}B"
