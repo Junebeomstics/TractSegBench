@@ -15,7 +15,7 @@ class Config(BaseConfig):
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "sorted_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 72 # number of output channel
-    NR_SLICES = 10
+    NR_SLICES = 47
     BATCH_SIZE = 1 # 4 explode with 40GB GPUs
     VAL_BATCH_SIZE = 16
     MODEL = "MASAM"
@@ -43,14 +43,14 @@ class Config(BaseConfig):
    
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
-    FP16 = True # True 시 validation 시에 index error 발생
+    FP16 = True 
     NUM_EPOCHS = 400
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
     LR_SCHEDULE_TYPE = "ReduceLROnPlateau" #CosineAnnealingLR" # ReduceLROnPlateau | CosineAnnealingLR
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
-    OPTIMIZER = "AdamW"
+    OPTIMIZER = "Adamax" # Adamax | AdamW
 
     DATA_AUGMENTATION = True
     RESIZE = None # 512 (int)

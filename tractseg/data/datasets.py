@@ -34,7 +34,8 @@ from tractseg.data.spatial_transform_custom import SpatialTransformCustom
 class MRISliceDataset(Dataset):
     def __init__(self, config, subjects, transform=None):
         self.config = config
-        self.subjects = subjects
+        self.subjects = subjects * int(self.config.INPUT_DIM[0]/self.config.NR_SLICES) # multiply by 144 to replicate original dataloader
+        np.random.shuffle(self.subjects) # shuffle the order of subjects to replicate original dataloader
         self.transform = transform
 
     def __len__(self):
@@ -70,11 +71,13 @@ class MRISliceDataset(Dataset):
 
         # Apply transformations
         if self.transform:
-            output= self.transform(**{'data':x, 'seg':y})
+            output = self.transform(**{'data':x, 'seg':y})
+        else:
+            output = None
         
         data_dict = {"subject": subject,
-                     "data": output['data'],  # (nr_slices, channels, x, y, [z])
-                     "seg": output['seg'], # (nr_slices, channels, x, y, [z])
+                     "data": output['data'] if output else x,  # (nr_slices, channels, x, y, [z])
+                     "seg": output['seg'] if output else y, # (nr_slices, channels, x, y, [z])
                      "slice_dir": slice_direction}  
 
         return data_dict
@@ -246,3 +249,9 @@ def transform_data(Config, type):
         #     tfs.append(ResizeTransform(target_size=512, order=3, order_seg=0))
     tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
     return tfs
+
+# transform_data for torch  
+def faster_transform_data(Config, type):
+    tfs=[]
+    if Config.NORMALIZE_DATA:
+        ZeroMeanUnitVarianceTransform_Standalone(per_channel=Config.NORMALIZE_PER_CHANNEL)

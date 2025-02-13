@@ -100,7 +100,7 @@ class BaseModel:
                 self.net.load_from(weights=weight)
                 print("Using pretrained self-supervied Swin UNETR backbone weights !")
         elif self.Config.MODEL == 'MASAM':
-            sam, img_embedding_size = sam_model_registry[self.Config.vit_name](image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE_TO_512 else 512,
+            sam, img_embedding_size = sam_model_registry[self.Config.vit_name](image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE,
                                                                 num_classes=self.Config.NR_OF_CLASSES-1,
                                                                 checkpoint=self.Config.WEIGHTS_PATH if self.Config.RESUME_TRAINING==False else None, in_chans=9, pixel_mean=[0., 0., 0.],
                                                                 pixel_std=[1., 1., 1.])

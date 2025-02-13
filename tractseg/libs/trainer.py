@@ -19,6 +19,7 @@ from tractseg.libs import metric_utils
 from tractseg.libs import plot_utils
 from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils
+from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 import torch
@@ -72,7 +73,7 @@ def train_model(Config, model, run, scheduler=None):
     #batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
                                                     # subjects=getattr(Config, "VALIDATE_SUBJECTS"))
 
-
+    #numpy-based augmentations
     tfs_train = Compose(transform_data(Config, type='train'))
     tfs_val = Compose(transform_data(Config, type='val'))
     
@@ -83,6 +84,10 @@ def train_model(Config, model, run, scheduler=None):
     batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
     batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+
+    # batch_gen_train=MultiThreadedAugmenter(batch_gen_train, Compose(tfs_train), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
+    # batch_gen_val=MultiThreadedAugmenter(batch_gen_val, Compose(tfs_val), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
+    # batch_gen_test=MultiThreadedAugmenter(batch_gen_test, Compose(tfs_val), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
 
     for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
@@ -143,7 +148,6 @@ def train_model(Config, model, run, scheduler=None):
                 # base_model
                 probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
                 timings["network_time"] += time.time() - start_time_network
-
                 start_time_metrics = time.time()
                 metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
                                           metrics, metr_batch, type)
@@ -154,11 +158,11 @@ def train_model(Config, model, run, scheduler=None):
                     time_batch_part = time.time() - start_time_batch_part
                     start_time_batch_part = time.time()
                     exp_utils.print_and_save(Config.EXP_PATH, "{} Ep {}, Sp {}, loss {}, t print {}s, t batch {}s".format(
-                        type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE, round(np.array(print_loss).mean(), 6),
+                        type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
                         round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
                     print_loss = []
 
-                
+                 
 
         ################################### Post Training tasks (each epoch) ###################################
 
