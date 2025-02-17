@@ -9,7 +9,13 @@ build/
 dist/
 *.c
 *.so
-
+*.out
+.neptune
+not_used
+pretrained_weights
+.ipynb_checkpoints
+hcp_exp
+checkpoints
 tractseg/experiments/old/*
 tractseg/experiments/old_1/*
 tractseg/experiments/old_2/*
