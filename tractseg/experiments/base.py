@@ -135,7 +135,7 @@ class Config:
     DAUG_INFO = "-"
     INFO = "-"
 
-    RESIZE_TO_512 = False
+    RESIZE = None # 512
 
     # for inference
     PREDICT_IMG = False
