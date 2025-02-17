@@ -15,21 +15,20 @@ class Config(BaseConfig):
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
-    NR_SLICES = 1 
     N_GPU = 1 # 4
 
     MODEL = "MASAM"
     rank = 32
     scale = 1
     module = "sam_fact_tt_image_encoder"
-    vit_name = 'vit_h'
+    vit_name = 'vit_l'
     compile = True
     DIM = "2D"  # 2D | 3D
     INPUT_DIM = (144,144) # Replace img_size
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
-    WEIGHTS_PATH = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_h_4b8939.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
+    WEIGHTS_PATH = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_l_0b3195.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
     # "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_b_01ec64.pth"
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_h_4b8939.pth
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth
@@ -44,15 +43,14 @@ class Config(BaseConfig):
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
-    BATCH_SIZE = 10
+    BATCH_SIZE = 1
+    NR_SLICES = 47
     NUM_EPOCHS = 400
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
-    OPTIMIZER = "AdamW"
 
     DATA_AUGMENTATION = True
-    RESIZE_TO_512 = False
 
     
