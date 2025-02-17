@@ -65,7 +65,8 @@ def train_model(Config, model, run, scheduler=None):
         if Config.LOG_PER_BUNDLE:
             for i, bundle_name in enumerate(dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:]):
                 metrics[f'bundle_{bundle_name}_f1_{type}' ] = [0]
-                Config.METRIC_TYPES.append(f'bundle_{bundle_name}_f1')
+                if f'bundle_{bundle_name}_f1' not in Config.METRIC_TYPES:
+                    Config.METRIC_TYPES.append(f'bundle_{bundle_name}_f1') # avoid duplicates
     
     # Define dataloaders 
     #batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
@@ -125,9 +126,29 @@ def train_model(Config, model, run, scheduler=None):
                 start_time_data_preparation = time.time()
                 batch_nr[type] += 1
 
+                def check_tensor_values(subject_name, x, y):
+                    reasons = []
+                    # Check for NaN values
+                    if torch.isnan(x).any() or torch.isnan(y).any():
+                        reasons.append("contains NaN")
+                    
+                    # Check for Infinity values
+                    if torch.isinf(x).any() or torch.isinf(y).any():
+                        reasons.append("contains Infinity")
+                    
+                    # Check if all values are zero
+                    if torch.all(x == 0) or torch.all(y == 0):
+                        reasons.append("all values are zero")
+                    
+                    # Print the subject name and reason if any issue is found
+                    if reasons:
+                        print(f"Subject {subject_name} has an issue: {', '.join(reasons)}")
+
                 subject = batch["subject"]
                 x = batch["data"]  # (bs, nr_of_channels, x, y)
                 y = batch["seg"]  # (bs, nr_of_classes, x, y)
+
+                check_tensor_values(subject, x, y)
 
                 if Config.MODEL == "LatentDiffusionModel":
                     # Sample random timesteps
@@ -174,6 +195,7 @@ def train_model(Config, model, run, scheduler=None):
         # Average loss per batch over entire epoch
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["train"], type="train")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
+        metrics = metric_utils.normalize_last_element(metrics, batch_nr["test"], type="test")
 
         # Log metrics
         for key,value in metrics.items():
