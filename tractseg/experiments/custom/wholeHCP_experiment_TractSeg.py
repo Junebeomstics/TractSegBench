@@ -15,8 +15,10 @@ class Config(BaseConfig):
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
-    NR_SLICES = 1 
-    compile = True
+    NR_SLICES = 47
+    BATCH_SIZE = 1 # 128 | 47 : number of slices per batch
+    COMPILE = True
+    CLASSES = "Brainlife"
 
     DIM = "2D"  # 2D | 3D
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
@@ -33,11 +35,11 @@ class Config(BaseConfig):
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
-    BATCH_SIZE = 47 # 128 | 47 : number of slices per batch
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
 
-    
+    LOG_PER_BUNDLE = True
+    DATA_AUGMENTATION = True
