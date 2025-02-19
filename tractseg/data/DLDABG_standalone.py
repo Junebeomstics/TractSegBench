@@ -12,6 +12,7 @@ import abc
 
 import numpy as np
 import torch
+import torch.nn as nn
 
 
 class SingleThreadedAugmenter(object):
@@ -37,22 +38,6 @@ class SingleThreadedAugmenter(object):
         item = next(self.data_loader)
         item = self.transform(**item)
         return item
-
-
-def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
-    data_normalized = np.zeros(data.shape, dtype=data.dtype)
-    for b in range(data.shape[0]):
-        if per_channel:
-            for c in range(data.shape[1]):
-                mean = data[b, c].mean()
-                std = data[b, c].std() + epsilon
-                data_normalized[b, c] = (data[b, c] - mean) / std
-        else:
-            mean = data[b].mean()
-            std = data[b].std() + epsilon
-            data_normalized[b] = (data[b] - mean) / std
-    return data_normalized
-
 
 class AbstractTransform(object):
     __metaclass__ = abc.ABCMeta
@@ -92,6 +77,21 @@ class Compose(AbstractTransform):
         return str(type(self).__name__) + " ( " + repr(self.transforms) + " )"
 
 
+def zero_mean_unit_variance_normalization(data, per_channel=True, epsilon=1e-8):
+    data_normalized = np.zeros(data.shape, dtype=data.dtype)
+    for b in range(data.shape[0]):
+        if per_channel:
+            for c in range(data.shape[1]):
+                mean = data[b, c].mean()
+                std = data[b, c].std() + epsilon
+                data_normalized[b, c] = (data[b, c] - mean) / std
+        else:
+            mean = data[b].mean()
+            std = data[b].std() + epsilon
+            data_normalized[b] = (data[b] - mean) / std
+    return data_normalized
+
+
 class ZeroMeanUnitVarianceTransform(AbstractTransform):
     """ Zero mean unit variance transform
 
@@ -112,6 +112,45 @@ class ZeroMeanUnitVarianceTransform(AbstractTransform):
         data_dict[self.data_key] = zero_mean_unit_variance_normalization(data_dict[self.data_key], self.per_channel,
                                                                          self.epsilon)
         return data_dict
+
+def zero_mean_unit_variance_normalization_pytorch(data, per_channel=True, epsilon=1e-8):
+    if not isinstance(data, torch.Tensor):
+        data = torch.from_numpy(data)
+    
+    if per_channel:
+        # 채널별로 정규화 [B, C, ...]
+        dims = tuple(range(2, data.dim()))  # 채널 이후의 모든 차원
+        mean = data.mean(dim=dims, keepdim=True)
+        std = data.std(dim=dims, keepdim=True) + epsilon
+    else:
+        # 배치별로 정규화 [B, ...]
+        dims = tuple(range(1, data.dim()))
+        mean = data.mean(dim=dims, keepdim=True)
+        std = data.std(dim=dims, keepdim=True) + epsilon
+    
+    return (data - mean) / std
+
+class ZeroMeanUnitVarianceTransform_PyTorch(AbstractTransform):
+    """ Zero mean unit variance transform
+
+    Args:
+        per_channel (bool): determines whether mean and std are computed for and applied to each color channel
+        separately
+
+        epsilon (float): prevent nan if std is zero, keep at 1e-7
+    """
+
+    def __init__(self, per_channel=True, epsilon=1e-7, data_key="data", label_key="seg"):
+        self.data_key = data_key
+        self.label_key = label_key
+        self.epsilon = epsilon
+        self.per_channel = per_channel
+
+    def __call__(self, **data_dict):
+        data_dict[self.data_key] = zero_mean_unit_variance_normalization_pytorch(data_dict[self.data_key], self.per_channel,
+                                                                         self.epsilon)
+        return data_dict
+
 
 
 class NumpyToTensor(AbstractTransform):
