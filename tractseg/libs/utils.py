@@ -5,7 +5,7 @@ import requests
 import numpy as np
 
 from tractseg.libs.system_config import SystemConfig as C
-
+import torch
 
 def invert_x_and_y(affineMatrix):
     """
@@ -177,3 +177,21 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+def check_tensor_values(subject_name, x, y):
+    reasons = []
+    # Check for NaN values
+    if torch.isnan(x).any() or torch.isnan(y).any():
+        reasons.append("contains NaN")
+    
+    # Check for Infinity values
+    if torch.isinf(x).any() or torch.isinf(y).any():
+        reasons.append("contains Infinity")
+    
+    # Check if all values are zero
+    if torch.all(x == 0) or torch.all(y == 0):
+        reasons.append("all values are zero")
+    
+    # Print the subject name and reason if any issue is found
+    if reasons:
+        print(f"Subject {subject_name} has an issue: {', '.join(reasons)}")

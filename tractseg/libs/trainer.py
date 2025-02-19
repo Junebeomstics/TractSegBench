@@ -17,8 +17,9 @@ import nibabel as nib
 from tractseg.libs import exp_utils
 from tractseg.libs import metric_utils
 from tractseg.libs import plot_utils
+from tractseg.libs import utils
 from tractseg.data.data_loader_inference import DataLoaderInference
-from tractseg.data import dataset_specific_utils
+from tractseg.data import dataset_specific_utils, datasets
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
@@ -125,30 +126,13 @@ def train_model(Config, model, run, scheduler=None):
             for batch in loader:
                 start_time_data_preparation = time.time()
                 batch_nr[type] += 1
-
-                def check_tensor_values(subject_name, x, y):
-                    reasons = []
-                    # Check for NaN values
-                    if torch.isnan(x).any() or torch.isnan(y).any():
-                        reasons.append("contains NaN")
-                    
-                    # Check for Infinity values
-                    if torch.isinf(x).any() or torch.isinf(y).any():
-                        reasons.append("contains Infinity")
-                    
-                    # Check if all values are zero
-                    if torch.all(x == 0) or torch.all(y == 0):
-                        reasons.append("all values are zero")
-                    
-                    # Print the subject name and reason if any issue is found
-                    if reasons:
-                        print(f"Subject {subject_name} has an issue: {', '.join(reasons)}")
-
+                #print('batch["data"].shape',batch["data"].shape) # (bs, nr_of_channels, x, y)
+                #batch = datasets.augment_data(Config, batch, type=type)
                 subject = batch["subject"]
                 x = batch["data"]  # (bs, nr_of_channels, x, y)
                 y = batch["seg"]  # (bs, nr_of_classes, x, y)
 
-                check_tensor_values(subject, x, y)
+                utils.check_tensor_values(subject, x, y)
 
                 if Config.MODEL == "LatentDiffusionModel":
                     # Sample random timesteps
