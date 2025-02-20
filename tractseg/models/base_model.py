@@ -197,26 +197,44 @@ class BaseModel:
         X = X.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, features, x, y)
         y = y.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, classes, x, y)
 
-        if self.Config.RESIZE:
-            bs, slices, features, w, h = X.shape
-            X = X.view(bs * slices, features, w, h)
-            y = y.view(bs * slices, -1, w, h) 
-            X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE), mode='bicubic', align_corners=False) # (bs * slices, features, 144, 144) -> (bs * slices, features, 512, 512)
-            y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE), mode='nearest') # (bs * slices, classes, 144, 144) -> (bs * slices, classes, 512, 512)
-            X = X.view(bs, slices, features, self.Config.RESIZE, self.Config.RESIZE)
-            y = y.view(bs, slices, -1, self.Config.RESIZE, self.Config.RESIZE)  # keep classes
+        if self.Config.DIM == "2D":
+            if self.Config.RESIZE:
+                bs, slices, features, w, h = X.shape
+                X = X.view(bs * slices, features, w, h)
+                y = y.view(bs * slices, -1, w, h) 
+                X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE), mode='bicubic', align_corners=False) # (bs * slices, features, 144, 144) -> (bs * slices, features, 512, 512)
+                y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE), mode='nearest') # (bs * slices, classes, 144, 144) -> (bs * slices, classes, 512, 512)
+                X = X.view(bs, slices, features, self.Config.RESIZE, self.Config.RESIZE)
+                y = y.view(bs, slices, -1, self.Config.RESIZE, self.Config.RESIZE)  # keep classes
+                
+                # final: (bs, slices, classes, x, y)
             
-            # final: (bs, slices, classes, x, y)
-        
-        if self.Config.MODEL == "MASAM":
-            bs, slices, classes, w, h = y.shape
-            # if MASAM, do not combine batch and slices dimension in input (X).
-            y = y.view(bs * slices, -1, w, h) 
-        else:
-            # if not MASAM, combine batch and slices dimension.
-            bs, slices, features, w, h = X.shape
-            X = X.view(bs * slices, features, w, h)
-            y = y.view(bs * slices, -1, w, h) 
+            if self.Config.MODEL == "MASAM":
+                bs, slices, classes, w, h = y.shape
+                # if MASAM, do not combine batch and slices dimension in input (X).
+                y = y.view(bs * slices, -1, w, h) 
+            else:
+                # if not MASAM, combine batch and slices dimension.
+                print(X.shape)
+                bs, slices, features, w, h = X.shape
+                X = X.view(bs * slices, features, w, h)
+                y = y.view(bs * slices, -1, w, h) 
+    
+        elif self.Config.DIM == "3D":
+            if self.Config.RESIZE:
+                X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE, self.Config.RESIZE), mode='trilinear', align_corners=False)
+                y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE, self.Config.RESIZE), mode='nearest')
+            
+            # if self.Config.MODEL == "MASAM":
+            #     bs, classes, w, h, d = y.shape
+            #     # if MASAM, do not combine batch and slices dimension in input (X).
+            #     y = y.transpose(0, 1).contiguous().view(bs * classes, w, h, d)
+            # else:
+            #     # if not MASAM, combine batch and slices dimension.
+            #     print(X.shape)
+            #     bs, features, w, h, d = X.shape
+            #     X = X.view(bs * slices, features, w, h)
+            #     y = y.view(bs * slices, -1, w, h) 
 
         if type == 'train' or self.Config.DROPOUT_SAMPLING:  
             self.net.train()
