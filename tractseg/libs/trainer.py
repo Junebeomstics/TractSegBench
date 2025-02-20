@@ -21,6 +21,7 @@ from tractseg.libs import utils
 from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils, datasets
 from tractseg.data.data_loader_training import DataLoaderTraining as DataLoaderTraining2D
+from tractseg.data.data_loader_training_3D import DataLoaderTraining as DataLoaderTraining3D
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
@@ -83,12 +84,16 @@ def train_model(Config, model, run, scheduler=None):
         batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
         batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
     else:
-        data_loader = DataLoaderTraining2D(Config) 
+        if Config.DIM == "2D":
+            data_loader = DataLoaderTraining2D(Config) 
+        else:
+            data_loader = DataLoaderTraining3D(Config)
         batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
                                                         subjects=getattr(Config, "TRAIN_SUBJECTS")) # BATCH_SIZE is not used in real.
         batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
                                                         subjects=getattr(Config, "VALIDATE_SUBJECTS"))
-        batch_gen_test = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="test",subjects=getattr(Config, "TEST_SUBJECTS"))
+        batch_gen_test = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="test",
+                                                        subjects=getattr(Config, "TEST_SUBJECTS"))
 
     for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
@@ -153,7 +158,7 @@ def train_model(Config, model, run, scheduler=None):
                             type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
                             round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
                         print_loss = []     
-            else:
+            else: # batchgenerator
                 if Config.DIM == "2D":
                     nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0] # INPUT_DIM[0] = 144 for HCP data 1.25mm
                 else:
@@ -174,13 +179,14 @@ def train_model(Config, model, run, scheduler=None):
                     batch_nr[type] += 1
 
                     subject = batch["subject"]
-                    print(f"current_subject:{subject}")
                     x = batch["data"]  # (nr_slices, nr_of_channels, x, y)
                     y = batch["seg"]  # (nr_slices, nr_of_classes, x, y)
-                    
-                    #previous implementation
-                    x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y)
-                    y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y)
+                    utils.check_tensor_values(subject, x, y)
+
+                    if Config.DIM == "2D":
+                        # currently, multiple subjects are not implemented for 2D, so please add batch dimension for subject
+                        x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y)
+                        y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y)
 
 
                     if Config.MODEL == "LatentDiffusionModel":
