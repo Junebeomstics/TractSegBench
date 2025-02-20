@@ -31,7 +31,7 @@ import torch
 from tractseg.libs import direction_merger
 from tractseg.libs import exp_utils
 from tractseg.libs import img_utils
-from tractseg.libs import peak_utils
+from tractseg.libs import peak_utils 
 #from tractseg.libs.system_config import SystemConfig as C
 from tractseg.libs import trainer
 from tractseg.data.data_loader_training import DataLoaderTraining as DataLoaderTraining2D

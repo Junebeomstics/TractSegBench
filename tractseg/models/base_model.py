@@ -131,7 +131,7 @@ class BaseModel:
         # self.net = nn.DataParallel(self.net)
 
         if self.Config.COMPILE:
-            self.net = torch.compile(self.net)
+            self.net = torch.compile(self.net, dynamic=False)
 
         if torch.cuda.device_count() > 1 and self.Config.USE_DP:
             print(f'Using DataParallel across {torch.cuda.device_count()} GPUs')

@@ -38,6 +38,11 @@ def get_bundle_names(CLASSES):
                     "rightParietoCerebellar", "rightSLF1And2", "rightSLF3", "rightTPC", "rightThalamicoCerebellar",
                     "rightUncinate", "rightVOF", "rightbaum", "rightcingulum", "rightfrontoThalamic",
                     "rightmeyer", "rightmotorThalamic", "rightpArc", "rightparietoThalamic", "rightspinoThalamic", "righttemporoThalamic"]
+
+    elif CLASSES == "VisTract":
+        # 15 Tracts
+        bundles = []
+
     # elif CLASSES == "All_tractometry":
     #     # 50 Tracts
     #     bundles = ['AF_left', 'AF_right', 'ATR_left', 'ATR_right', 'CC_1', 'CC_2', 'CC_3', 'CC_4', 'CC_5', 'CC_6',

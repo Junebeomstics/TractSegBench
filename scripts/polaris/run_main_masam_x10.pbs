@@ -6,12 +6,14 @@
 #PBS -l walltime=15:00:00
 #PBS -q preemptable
 #PBS -j oe
-#PBS -o /grand/NeuroX/junbeom/TractSegVis/TractSeg/logs
+
 
 module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
 # bigger model (vit_l) -> using pretrained patch embedding layer with new conv1d layer
-./ExpRunner --config Zenedo_experiment_MASAM_x10 --en run_with_default_settings_MASAM_x10 --train True --test True --seg --lw
+#./ExpRunner --config Zenedo_experiment_MASAM_x10 --en run_with_default_settings_MASAM_x10 --train True --test True --seg --lw
+./ExpRunner --config Zenedo_experiment_MASAM_x10 --en run_with_default_settings_MASAM_x10 --train True --test True  --lw  # --use_dp #--only_val #--seg
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

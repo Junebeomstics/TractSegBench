@@ -221,27 +221,36 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
     def generate_train_batch(self):
 
         subjects = self._data[0]
-        subject_idx = int(random.uniform(0, len(subjects)))
+        subject_idx = int(random.uniform(0, len(subjects))) # choose only one subject
 
-        data, seg = load_training_data(self.Config, subjects[subject_idx])
+        data, seg = load_training_data(self.Config, subjects[subject_idx]) 
 
         # Convert peaks to tensors if tensor model
         if self.Config.NR_OF_GRADIENTS == 18*self.Config.NR_SLICES:
             data = peak_utils.peaks_to_tensors(data)
 
         slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION) # if xyz, randomly choose one (1/3 per direction)
-        if data.shape[slice_direction] <= self.batch_size:
+        #if data.shape[slice_direction] <= self.batch_size:
+        if data.shape[slice_direction] <= self.Config.NR_SLICES:
             print("INFO: Batch size bigger than nr of slices. Therefore sampling with replacement.")
-            slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, True, None)
+            #slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, True, None)
+            slice_idxs = np.random.choice(data.shape[slice_direction], self.Config.NR_SLICES, True, None)
         else:
-            slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, False, None)
+            #slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, False, None)
+            slice_idxs = np.random.choice(data.shape[slice_direction], self.Config.NR_SLICES, False, None)
 
-        if self.Config.NR_SLICES > 1:
-            x, y = data_utils.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction,
-                                             labels_type=self.Config.LABELS_TYPE, slice_window=self.Config.NR_SLICES)
-        else:
-            x, y = data_utils.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction,
-                                            labels_type=self.Config.LABELS_TYPE)
+            if self.Config.USE_CONSECUTIVE_SLICES:
+                # Choose random starting index for consecutive slices
+                #start_idx = np.random.randint(0, data.shape[slice_direction] - self.batch_size + 1)
+                start_idx = np.random.randint(0, data.shape[slice_direction] - self.Config.NR_SLICES + 1)
+                slice_idxs = np.arange(start_idx, start_idx + self.Config.NR_SLICES)
+
+        # if self.Config.NR_SLICES > 1:
+        #     x, y = data_utils.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction,
+        #                                      labels_type=self.Config.LABELS_TYPE, slice_window=self.Config.NR_SLICES)
+        # else:
+        x, y = data_utils.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction,
+                                        labels_type=self.Config.LABELS_TYPE)
 
 
         # Can be replaced by crop
@@ -270,9 +279,10 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
 
         # possible optimization: sample slices from different patients and pad all to same size (size of biggest)
 
-        data_dict = {"data": x,  # (batch_size, channels, x, y, [z])
+        data_dict = {"subject": subjects[subject_idx],
+                    "data": x,  # (NR_SLICES, channels, x, y, [z])
                      "seg": y,
-                     "slice_dir": slice_direction}  # (batch_size, channels, x, y, [z])
+                     "slice_dir": slice_direction}  # (NR_SLICES, channels, x, y, [z])
         return data_dict
 
 
@@ -381,13 +391,13 @@ class DataLoaderTraining:
         data = subjects # A list containing subject names 
         seg = []
 
-        if self.Config.TYPE == "combined":
-            batch_gen = BatchGenerator2D_Npy_random((data, seg), batch_size=batch_size)
-        else: # single_direction
-            batch_gen = BatchGenerator2D_Nifti_random((data, seg), batch_size=batch_size)
-            # batch_gen = SlicesBatchGeneratorRandomNiftiImg_5slices((data, seg), batch_size=batch_size)
+        # if self.Config.TYPE == "combined":
+        #     batch_gen = BatchGenerator2D_Npy_random((data, seg), batch_size=batch_size)
+        # else: # single_direction
+        batch_gen = BatchGenerator2D_Nifti_random((data, seg), batch_size=batch_size)
+        # batch_gen = SlicesBatchGeneratorRandomNiftiImg_5slices((data, seg), batch_size=batch_size)
 
-        batch_gen.Config = self.Config # why?? 
+        batch_gen.Config = self.Config 
 
         batch_gen = self._augment_data(batch_gen, type=type)
 

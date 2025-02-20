@@ -45,13 +45,14 @@ class MRISliceDataset(Dataset):
     def __init__(self, config, subjects, transform=None):
         self.config = config
         self.subjects = subjects * int(self.config.INPUT_DIM[0]/self.config.NR_SLICES) # multiply by 144 to replicate original dataloader
-        np.random.shuffle(self.subjects) # shuffle the order of subjects to replicate original dataloader
         self.transform = transform
 
     def __len__(self):
         return len(self.subjects)
 
     def __getitem__(self, idx):
+        # override idx to replicate original dataloader
+        idx = int(random.uniform(0, len(self.subjects)))
         subject = self.subjects[idx] 
         data, seg = self.load_subject_data(subject)
 

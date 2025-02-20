@@ -13,7 +13,7 @@ class Config:
     Settings and hyperparameters
     """
     # arguments from C
-    HOME = '/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg' #/grand/NeuroX/junbeom/TractSegVis/TractSeg'
+    HOME = '/grand/NeuroX/junbeom/TractSegVis/TractSeg' #'/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg' #/grand/NeuroX/junbeom/TractSegVis/TractSeg'
     TRACT_SEG_HOME=join(HOME,'.tractseg') 
     NETWORK_DRIVE = None
     WEIGHTS_DIR = TRACT_SEG_HOME
@@ -51,6 +51,7 @@ class Config:
     BATCH_SIZE = 4
     VAL_BATCH_SIZE = 8
     NR_SLICES = 47
+    USE_CONSECUTIVE_SLICES = False
     
     SUBJECTS_PER_BATCH = 1
     LEARNING_RATE = 0.001
@@ -62,6 +63,7 @@ class Config:
     LR_WARMUP_RATIO = 0.01 # only for CosineAnnealingLR
     LR_CYCLE = 1 # only for CosineAnnealingLR # size of the first cycle
     LR_T_MULT = -1 # only for CosineAnnealingLR 
+    USE_NEW_DATALOADER = False
 
     UNET_NR_FILT = 64
     EPOCH_MULTIPLIER = 1  # 2D: 1, 3D: 12 for lowRes, 3 for highRes
@@ -135,7 +137,7 @@ class Config:
     DAUG_INFO = "-"
     INFO = "-"
 
-    RESIZE = None # 512
+    RESIZE = False
 
     # for inference
     PREDICT_IMG = False
@@ -144,5 +146,6 @@ class Config:
     KEEP_INTERMEDIATE_FILES = False
     CSD_RESOLUTION = "LOW"  # HIGH | LOW
     NR_CPUS = -1
+
 
 

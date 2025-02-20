@@ -10,7 +10,8 @@ class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
     DATASET = "HCP"  # HCP (105) | HCP_all (1061) | HCP_vis
-    DATA_PATH= "/pscratch/sd/j/junbeom/"
+    DATA_PATH= "/grand/NeuroX/junbeom/TractSegVis"
+    # 
     DATASET_FOLDER = "HCP_preproc_Zenedo" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "sorted_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
@@ -29,7 +30,7 @@ class Config(BaseConfig):
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
-    WEIGHTS_PATH = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_l_0b3195.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
+    WEIGHTS_PATH = "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"
     # "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_b_01ec64.pth"
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth
     # /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_h_4b8939.pth

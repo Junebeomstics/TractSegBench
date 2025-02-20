@@ -10,7 +10,7 @@ class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
     DATASET = "HCP_all"  # HCP (105) | HCP_all (1061) | HCP_vis
-    DATA_PATH= "/pscratch/sd/j/junbeom/"
+    DATA_PATH= "/grand/NeuroX/junbeom/TractSegVis"
     DATASET_FOLDER = "HCP_preproc_brainlife" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "bundle_masks" # if not set, predefined LABELS_FILENAME is used.

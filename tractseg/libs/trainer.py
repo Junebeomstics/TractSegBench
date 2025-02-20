@@ -20,6 +20,7 @@ from tractseg.libs import plot_utils
 from tractseg.libs import utils
 from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils, datasets
+from tractseg.data.data_loader_training import DataLoaderTraining as DataLoaderTraining2D
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
@@ -69,106 +70,154 @@ def train_model(Config, model, run, scheduler=None):
                 if f'bundle_{bundle_name}_f1' not in Config.METRIC_TYPES:
                     Config.METRIC_TYPES.append(f'bundle_{bundle_name}_f1') # avoid duplicates
     
-    # Define dataloaders 
-    #batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
-                                                      # subjects=getattr(Config, "TRAIN_SUBJECTS"))
-    #batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
-                                                    # subjects=getattr(Config, "VALIDATE_SUBJECTS"))
-
-    #numpy-based augmentations
-    tfs_train = Compose(transform_data(Config, type='train'))
-    tfs_val = Compose(transform_data(Config, type='val'))
-    
-    train_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=tfs_train)
-    val_dataset = MRISliceDataset(Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=tfs_val)
-    test_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TEST_SUBJECTS"), transform=tfs_val)
-    
-    batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-    batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-    batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-
-    # batch_gen_train=MultiThreadedAugmenter(batch_gen_train, Compose(tfs_train), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
-    # batch_gen_val=MultiThreadedAugmenter(batch_gen_val, Compose(tfs_val), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
-    # batch_gen_test=MultiThreadedAugmenter(batch_gen_test, Compose(tfs_val), num_processes=16, num_cached_per_queue=4, seeds=None, pin_memory=True)
+    if Config.USE_NEW_DATALOADER:
+        # Define dataloaders 
+        tfs_train = Compose(transform_data(Config, type='train'))
+        tfs_val = Compose(transform_data(Config, type='val'))
+        
+        train_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=tfs_train)
+        val_dataset = MRISliceDataset(Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=tfs_val)
+        test_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TEST_SUBJECTS"), transform=tfs_val)
+        
+        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+    else:
+        data_loader = DataLoaderTraining2D(Config) 
+        batch_gen_train = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="train",
+                                                        subjects=getattr(Config, "TRAIN_SUBJECTS")) # BATCH_SIZE is not used in real.
+        batch_gen_val = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="validate",
+                                                        subjects=getattr(Config, "VALIDATE_SUBJECTS"))
+        batch_gen_test = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="test",subjects=getattr(Config, "TEST_SUBJECTS"))
 
     for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
 
-        timings = defaultdict(lambda: 0)
-        batch_nr = defaultdict(lambda: 0)
+        timings = defaultdict(lambda: 0) 
+        batch_nr = defaultdict(lambda: 0) # 매 epoch마다 초기화
         weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
         types = ["validate"] if Config.ONLY_VAL else ["train", "validate", "test"]
 
+       
+        
         for type in types:
-            print_loss = []
-
-            if Config.DIM == "2D":
-                nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0] # INPUT_DIM[0] = 144 for HCP data 1.25mm
-            else:
-                nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
-
-            # *Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)
-            # if type == "train":
-            #     nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
-            # else:
-            #     nr_batches = int(int(nr_of_samples / Config.VAL_BATCH_SIZE) * Config.EPOCH_MULTIPLIER)
-
             print(f"Start looping {type} batches in epoch {epoch_nr}...")
+            print_loss = []
             start_time_batch_part = time.time()
-            #for i in range(nr_batches):
-            if type == "train":
-                loader = batch_gen_train
-            elif type == "validate":
-                loader = batch_gen_val
-            elif type == "test":
-                loader = batch_gen_test   
+            if Config.USE_NEW_DATALOADER:
+                if type == "train":
+                    loader = batch_gen_train
+                elif type == "validate":
+                    loader = batch_gen_val
+                elif type == "test":
+                    loader = batch_gen_test   
 
-            for batch in loader:
-                start_time_data_preparation = time.time()
-                batch_nr[type] += 1
-                #print('batch["data"].shape',batch["data"].shape) # (bs, nr_of_channels, x, y)
-                #batch = datasets.augment_data(Config, batch, type=type)
-                subject = batch["subject"]
-                x = batch["data"]  # (bs, nr_of_channels, x, y)
-                y = batch["seg"]  # (bs, nr_of_classes, x, y)
-
-                utils.check_tensor_values(subject, x, y)
-
-                if Config.MODEL == "LatentDiffusionModel":
-                    # Sample random timesteps
-                    timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
-
-                    # Add noise to inputs (forward diffusion)
-                    noise = torch.randn_like(x)
-                    x = scheduler.add_noise(x, noise, timesteps)
-                    y = noise
-                else:
-                    noise = None
-                    timesteps = None
-
-                timings["data_preparation_time"] += time.time() - start_time_data_preparation
-                start_time_network = time.time()
-                nr_of_updates += 1
+                for batch in loader:
+                    start_time_data_preparation = time.time()
+                    batch_nr[type] += 1
+                    subject = batch["subject"]
+                    x = batch["data"]
+                    y = batch["seg"]  # (bs, nr_of_classes, x, y)
+                    
+                    utils.check_tensor_values(subject, x, y)
                 
-                # base_model
-                probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
-                timings["network_time"] += time.time() - start_time_network
-                start_time_metrics = time.time()
-                metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
-                                          metrics, metr_batch, type)
-                timings["metrics_time"] += time.time() - start_time_metrics
+                    if Config.MODEL == "LatentDiffusionModel":
+                        # Sample random timesteps
+                        timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
 
-                print_loss.append(metr_batch["loss"])
-                if batch_nr[type] % Config.PRINT_FREQ == 0:
-                    time_batch_part = time.time() - start_time_batch_part
-                    start_time_batch_part = time.time()
-                    exp_utils.print_and_save(Config.EXP_PATH, "{} Ep {}, Sp {}, loss {}, t print {}s, t batch {}s".format(
-                        type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
-                        round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
-                    print_loss = []
+                        # Add noise to inputs (forward diffusion)
+                        noise = torch.randn_like(x)
+                        x = scheduler.add_noise(x, noise, timesteps)
+                        y = noise
+                    else:
+                        noise = None
+                        timesteps = None
 
-                 
+                    timings["data_preparation_time"] += time.time() - start_time_data_preparation
+                    start_time_network = time.time()
+                    #nr_of_updates += 1
+                    
+                    # base_model
+                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
+                    timings["network_time"] += time.time() - start_time_network
+                    start_time_metrics = time.time()
+                    metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
+                                            metrics, metr_batch, type)
+                    timings["metrics_time"] += time.time() - start_time_metrics
 
+                    print_loss.append(metr_batch["loss"])
+                    if batch_nr[type] % Config.PRINT_FREQ == 0:
+                        time_batch_part = time.time() - start_time_batch_part
+                        start_time_batch_part = time.time()
+                        exp_utils.print_and_save(Config.EXP_PATH, "{} Ep {}, Sp {}, loss {}, t print {}s, t batch {}s".format(
+                            type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
+                            round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
+                        print_loss = []     
+            else:
+                if Config.DIM == "2D":
+                    nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0] # INPUT_DIM[0] = 144 for HCP data 1.25mm
+                else:
+                    nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
+                
+                #*Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)   
+                nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER)
+
+                for i in range(nr_batches):  
+                    if type == "train":
+                        batch = next(batch_gen_train)
+                    elif type == "validate":
+                        batch = next(batch_gen_val)
+                    elif type == "test":
+                        batch = next(batch_gen_test)
+
+                    start_time_data_preparation = time.time()
+                    batch_nr[type] += 1
+
+                    subject = batch["subject"]
+                    print(f"current_subject:{subject}")
+                    x = batch["data"]  # (nr_slices, nr_of_channels, x, y)
+                    y = batch["seg"]  # (nr_slices, nr_of_classes, x, y)
+                    
+                    #previous implementation
+                    x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y)
+                    y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y)
+
+
+                    if Config.MODEL == "LatentDiffusionModel":
+                        # Sample random timesteps
+                        timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
+
+                        # Add noise to inputs (forward diffusion)
+                        noise = torch.randn_like(x)
+                        x = scheduler.add_noise(x, noise, timesteps)
+                        y = noise
+                    else:
+                        noise = None
+                        timesteps = None
+
+                    timings["data_preparation_time"] += time.time() - start_time_data_preparation
+                    start_time_network = time.time()
+                    #nr_of_updates += 1
+                    
+                    # base_model
+                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
+                    timings["network_time"] += time.time() - start_time_network
+                    start_time_metrics = time.time()
+                    metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
+                                            metrics, metr_batch, type)
+                    timings["metrics_time"] += time.time() - start_time_metrics
+
+                    print_loss.append(metr_batch["loss"])
+                    if batch_nr[type] % Config.PRINT_FREQ == 0:
+                        time_batch_part = time.time() - start_time_batch_part
+                        start_time_batch_part = time.time()
+                        exp_utils.print_and_save(Config.EXP_PATH, "{} Ep {}, Sp {}, loss {}, t print {}s, t batch {}s".format(
+                            type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
+                            round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
+                        print_loss = []     
+                
+
+            
         ################################### Post Training tasks (each epoch) ###################################
 
         if Config.ONLY_VAL:
@@ -176,7 +225,7 @@ def train_model(Config, model, run, scheduler=None):
             print("f1 macro validate: {}".format(round(metrics["f1_macro_validate"][0], 4)))
             return model
 
-        # Average loss per batch over entire epoch
+        # Average losses of batches in the epoch
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["train"], type="train")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["test"], type="test")
@@ -220,7 +269,7 @@ def train_model(Config, model, run, scheduler=None):
         # Adding next Epoch
         if epoch_nr < Config.NUM_EPOCHS-1:
             metrics = metric_utils.add_empty_element(metrics)
-        
+
 def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=True, only_prediction=False,
                 batch_size=1, unit_test=False):
     """
