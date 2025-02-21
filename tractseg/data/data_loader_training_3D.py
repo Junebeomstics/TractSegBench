@@ -80,7 +80,8 @@ class BatchGenerator3D_Nifti_random(SlimDataLoaderBase):
         x = x.astype(np.float32)
         y = y.astype(np.float32)
 
-        data_dict = {"data": x,  # (batch_size, channels, x, y, [z])
+        data_dict = {"subject": np.array(subjects)[subject_idxs],
+                    "data": x,  # (batch_size, channels, x, y, [z])
                      "seg": y}  # (batch_size, channels, x, y, [z])
         return data_dict
 
@@ -137,7 +138,7 @@ class DataLoaderTraining:
         tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
 
         # num_cached_per_queue 1 or 2 does not really make a difference
-        batch_gen = MultiThreadedAugmenter(batch_generator, Compose(tfs), num_processes=num_processes,
+        batch_gen = MultiThreadedAugmenter(batch_generator, Compose(tfs), num_processes=self.Config.NUM_PROCESSES,
                                            num_cached_per_queue=1, seeds=None, pin_memory=True)
         return batch_gen  # data: (batch_size, channels, x, y), seg: (batch_size, channels, x, y)
 
