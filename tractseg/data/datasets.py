@@ -44,39 +44,62 @@ from tractseg.data.custom_transformations import FlipVectorAxisTransform_PyTorch
 class MRISliceDataset(Dataset):
     def __init__(self, config, subjects, transform=None):
         self.config = config
-        self.subjects = subjects * int(self.config.INPUT_DIM[0]/self.config.NR_SLICES) # multiply by 144 to replicate original dataloader
+        if config.DIM == "2D":
+            self.subjects = subjects * int(self.config.INPUT_DIM[0]/self.config.NR_SLICES) # multiply by 144 to replicate original dataloader
+        elif config.DIM == "3D":
+            self.subjects = subjects 
         self.transform = transform
 
     def __len__(self):
         return len(self.subjects)
 
     def __getitem__(self, idx):
-        # override idx to replicate original dataloader
-        idx = int(random.uniform(0, len(self.subjects)))
-        subject = self.subjects[idx] 
-        data, seg = self.load_subject_data(subject)
+        if self.config.DIM == "2D":
+            # override idx to replicate original dataloader
+            idx = int(random.uniform(0, len(self.subjects)))
+            subject = self.subjects[idx] 
+            data, seg = self.load_subject_data(subject)
 
-        # Convert peaks to tensors if tensor model
-        if self.config.NR_OF_GRADIENTS == 18*self.config.NR_SLICES:
-            data = self.peaks_to_tensors(data)
+            # Convert peaks to tensors if tensor model
+            # if self.config.NR_OF_GRADIENTS == 18*self.config.NR_SLICES:
+            #     data = self.peaks_to_tensors(data)
 
-        slice_direction = self.slice_dir_to_int(self.config.TRAINING_SLICE_DIRECTION) # randomly choose on slice direction
-        slice_idxs = self.get_random_slices(data, slice_direction, nr_slices=self.config.NR_SLICES) # sample as much as batch size
+            slice_direction = self.slice_dir_to_int(self.config.TRAINING_SLICE_DIRECTION) # randomly choose on slice direction
+            slice_idxs = self.get_random_slices(data, slice_direction, nr_slices=self.config.NR_SLICES) # sample as much as batch size
 
-        # if self.config.NR_SLICES > 1:
-        #     x, y = self.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction, slice_window=self.config.NR_SLICES)
-        # else:
-        x, y = self.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction)
+            if self.config.USE_CONSECUTIVE_SLICES:
+                # Choose random starting index for consecutive slices
+                #start_idx = np.random.randint(0, data.shape[slice_direction] - self.batch_size + 1)
+                start_idx = np.random.randint(0, data.shape[slice_direction] - self.config.NR_SLICES + 1)
+                slice_idxs = np.arange(start_idx, start_idx + self.config.NR_SLICES)
 
-        if self.config.PAD_TO_SQUARE:
-            #Crop and pad to input size
-            #print(x.shape,y.shape) # (1, 9, 109, 114) (1, 72, 109, 114) (it can change)
-            x, y = crop(x, y, crop_size=self.config.INPUT_DIM)  # does not work with img with batches and channels
-            #print(x.shape,y.shape) # (1, 9, 144, 144) (1, 72, 144, 144)
-        else:
-            x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
-            y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
+            # if self.config.NR_SLICES > 1:
+            #     x, y = self.sample_Xslices(data, seg, slice_idxs, slice_direction=slice_direction, slice_window=self.config.NR_SLICES)
+            # else:
+            x, y = self.sample_slices(data, seg, slice_idxs, slice_direction=slice_direction)
 
+            if self.config.PAD_TO_SQUARE:
+                #Crop and pad to input size
+                #print(x.shape,y.shape) # (NR_SLICES, 9, 109, 114) (NR_SLICES, 72, 109, 114), NR_SLICES play a role as BATCH_SIZE
+                x, y = crop(x, y, crop_size=self.config.INPUT_DIM)  # does not work with img with batches and channels
+                #print(x.shape,y.shape) # (NR_SLICES, 9, 144, 144) (NR_SLICES, 72, 144, 144)
+            else:
+                x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
+                y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
+
+
+        elif self.config.DIM == "3D":
+            subject = self.subjects[idx]
+            x, y = self.load_subject_data(subject)
+            x = np.expand_dims(np.array(x).transpose(3, 0, 1, 2), axis=0) # (x,y,z, channels) -> (1, channels, x, y, z)
+            y = np.expand_dims(np.array(y).transpose(3, 0, 1, 2), axis=0) # (x,y,z, channels) -> (1, channels, x, y, z)
+            if self.config.PAD_TO_SQUARE:
+                x, y = crop(x, y, crop_size=self.config.INPUT_DIM) 
+            else:
+                x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16, 16), mode='constant', kwargs={'constant_values': 0})
+                y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16, 16), mode='constant', kwargs={'constant_values': 0})
+
+        
         x = x.astype(np.float32)
         y = y.astype(np.float32)
 
