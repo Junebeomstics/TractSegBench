@@ -132,7 +132,6 @@ class BaseModel:
 
         if self.Config.COMPILE:
             self.net = torch.compile(self.net, dynamic=False)
-
         if torch.cuda.device_count() > 1 and self.Config.USE_DP:
             print(f'Using DataParallel across {torch.cuda.device_count()} GPUs')
             self.net = nn.DataParallel(self.net)
@@ -309,6 +308,10 @@ class BaseModel:
                     else:
                         loss = self.criterion(outputs, y)
                 loss.backward()
+
+                if self.Config.GRADIENT_CLIP:
+                    torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.Config.GRADIENT_CLIP)
+
                 self.optimizer.step()
         elif type == 'validate' or type == 'test':
             with torch.no_grad():
