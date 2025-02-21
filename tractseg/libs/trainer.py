@@ -80,9 +80,9 @@ def train_model(Config, model, run, scheduler=None):
         val_dataset = MRISliceDataset(Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=tfs_val)
         test_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TEST_SUBJECTS"), transform=tfs_val)
         
-        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=Config.NUM_PROCESSES, pin_memory=True)
+        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=Config.NUM_PROCESSES, pin_memory=True)
+        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=Config.NUM_PROCESSES, pin_memory=True)
     else:
         if Config.DIM == "2D":
             data_loader = DataLoaderTraining2D(Config) 
