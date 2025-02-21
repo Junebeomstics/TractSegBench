@@ -10,16 +10,16 @@ class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
     DATASET = "HCP"  # HCP (105) | HCP_all (1061) | HCP_vis
-    DATA_PATH= "/pscratch/sd/j/junbeom/"
+    DATA_PATH= "/grand/NeuroX/junbeom/TractSegVis"
     DATASET_FOLDER = "HCP_preproc_Zenedo" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "sorted_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 72 # number of output channel
     NR_SLICES = 1 
 
-    MODEL = "monai_unet"
-    DIM = "2D"  # 2D | 3D
-    INPUT_DIM = (144,144) #,144)
+    MODEL = "UNet3D_Pytorch_DeepSup_sm" #unet3d_pytorch_deepsup_sm"
+    DIM = "3D"  # 2D | 3D
+    INPUT_DIM = (144,144,144) #,144)
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
@@ -34,11 +34,14 @@ class Config(BaseConfig):
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
-    BATCH_SIZE = 47 #8 # 128 | 47 : number of slices per batch
+    BATCH_SIZE = 4 #8 # 128 | 47 : number of slices per batch
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" #"default" # default | soft_batch_dice
-
+    UPSAMPLE_TYPE = "trilinear"
+    LOG_PER_BUNDLE = True
+    NUM_PROCESSES = 12
+    GRADIENT_CLIP = 1
     
