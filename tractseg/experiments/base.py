@@ -146,6 +146,8 @@ class Config:
     KEEP_INTERMEDIATE_FILES = False
     CSD_RESOLUTION = "LOW"  # HIGH | LOW
     NR_CPUS = -1
+    NUM_PROCESSES = 16 # 16 for 2D, 12 for 3D
+    GRADIENT_CLIP = None # 1.0
 
 
 
