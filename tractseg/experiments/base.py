@@ -21,7 +21,7 @@ class Config:
     if target_folder in parts:
         target_index = parts.index(target_folder)
         HOME = os.sep.join(parts[: target_index + 1])
-        print("Path up to TractSeg folder:", tractseg_path)
+        print("Path up to TractSeg folder:", HOME)
     else:
         print(f"'{target_folder}' folder not found.")
     TRACT_SEG_HOME=join(HOME,'.tractseg') 
@@ -68,8 +68,8 @@ class Config:
     LR_SCHEDULE = True
     LR_SCHEDULE_TYPE = "ReduceLROnPlateau" # ReduceLROnPlateau | CosineAnnealingLR
     LR_SCHEDULE_MODE = "min"  # min | max
-    LR_SCHEDULE_PATIENCE = 20
-    LR_GAMMA = 0.5 # only for CosineAnnealingLR
+    LR_SCHEDULE_PATIENCE = 10
+    LR_GAMMA = 0.8 # only for CosineAnnealingLR
     LR_WARMUP_RATIO = 0.01 # only for CosineAnnealingLR
     LR_CYCLE = 1 # only for CosineAnnealingLR # size of the first cycle
     LR_T_MULT = -1 # only for CosineAnnealingLR 
