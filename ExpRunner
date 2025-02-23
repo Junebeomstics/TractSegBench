@@ -120,9 +120,17 @@ def main():
     Config.EXP_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME, Config.EXP_NAME) #Config.EXP_NAME="HCP_TEST" -> "hcp_exp/HCP_TEST"
     Config.TRAIN_SUBJECTS, Config.VALIDATE_SUBJECTS, Config.TEST_SUBJECTS = dataset_specific_utils.get_cv_fold(Config) # Config.DATASET = "HCP"
 
-    if Config.WEIGHTS_PATH == "":
-        # return path to best weights
-        Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, Config.LOAD_WEIGHTS or Config.RESUME_TRAINING) # Config.LOAD_WEIGHTS = False
+    if Config.RESUME_TRAINING:
+        # return path to best weights based on Config.EXP_PATH regardless of the Config.WEIGHTS_PATH
+        # You should write the valid Config.EXP_PATH
+        print(Config.EXP_PATH)
+        Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, Config.RESUME_TRAINING) # Config.LOAD_WEIGHTS = False
+    elif Config.LOAD_WEIGHTS:
+        if Config.WEIGHTS_PATH == "":
+            # return path to best weights if you have not specified Config.WEIGHTS_PATH
+            Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, Config.LOAD_WEIGHTS)
+        else: 
+            pass # If you have specified Config.WEIGHTS_PATH, it will be loaded at base_model.py
 
     #Autoset input dimensions based on settings
     # Config.INPUT_DIM = dataset_specific_utils.get_correct_input_dim(Config) # Config.DIM and Config.RESOLUTION are used.
