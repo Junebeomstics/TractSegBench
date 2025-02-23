@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 from os.path import join
+import os
 
 from tractseg.data import dataset_specific_utils
 #from tractseg.libs.system_config import SystemConfig as C
@@ -12,12 +13,21 @@ class Config:
     """
     Settings and hyperparameters
     """
-    # arguments from C
-    HOME = '/grand/NeuroX/junbeom/TractSegVis/TractSeg' #'/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg' #/grand/NeuroX/junbeom/TractSegVis/TractSeg'
+    
+    script_path = os.path.abspath(__file__)
+    # Find the path up to the "TractSeg" folder
+    target_folder = "TractSeg"
+    parts = script_path.split(os.sep)  
+    if target_folder in parts:
+        target_index = parts.index(target_folder)
+        HOME = os.sep.join(parts[: target_index + 1])
+        print("Path up to TractSeg folder:", tractseg_path)
+    else:
+        print(f"'{target_folder}' folder not found.")
     TRACT_SEG_HOME=join(HOME,'.tractseg') 
     NETWORK_DRIVE = None
     WEIGHTS_DIR = TRACT_SEG_HOME
-    DATA_PATH = HOME
+    DATA_PATH = None
     
 
     # input data
