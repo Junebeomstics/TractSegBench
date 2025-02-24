@@ -22,7 +22,7 @@ class Config(BaseConfig):
     scale = 1
     module = "sam_fact_tt_image_encoder"
     vit_name = 'vit_l'
-    compile = True
+    COMPILE = True
     DIM = "2D"  # 2D | 3D
     INPUT_DIM = (144,144) # Replace img_size
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
@@ -52,5 +52,6 @@ class Config(BaseConfig):
     LOSS_FUNCTION = "default" # default | soft_batch_dice
 
     DATA_AUGMENTATION = True
+    LOG_PER_BUNDLE = True
 
     
