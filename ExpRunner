@@ -72,6 +72,7 @@ def main():
 
     parser.add_argument("--with_id", type=str, default=None, help="Neptune run id")
     parser.add_argument("--weights_path", type=str, default="", help="path to weights if not using path in Config")
+    parser.add_argument("--data_path", type=str, default=None, help="Neptune run id")
     parser.add_argument("--use_dp", action="store_true", help="whether to activate DataParallel")
     parser.add_argument("--use_ddp", action="store_true", help="whether to activate DistributedDataParallel")
     args = parser.parse_args()
@@ -91,7 +92,6 @@ def main():
 
     if args.en:
         Config.EXP_NAME = args.en # update Config.EXP_NAME
-
     Config.TRAIN = bool(args.train) # True
     Config.TEST = bool(args.test) # True
     if args.seg:
@@ -114,6 +114,8 @@ def main():
         Config.WEIGHTS_PATH = args.weights_path
     if args.use_dp:
         Config.USE_DP = args.use_dp
+    if args.data_path:
+        Config.DATA_PATH = args.data_path
     Config.VERBOSE = args.verbose # by default: verbose = True
 
     Config.MULTI_PARENT_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME) # by default: C.EXP_PATH = "hcp_exp", Config.EXP_MULTI_NAME=""
