@@ -13,5 +13,5 @@
 module load pytorch/2.1.0
 
 cd /global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/
-./ExpRunner --config wholeHCP_experiment_TractSeg --en run_with_wholeHCP_TractSeg --train True --test True --seg
+./ExpRunner --config wholeHCP_experiment_TractSeg --en run_with_wholeHCP_TractSeg --train True --test True --seg 
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
