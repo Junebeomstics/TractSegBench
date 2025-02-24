@@ -86,7 +86,7 @@ class BaseModel:
         if self.Config.MODEL.lower() == 'swinunetr':
             NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
                                    self.Config.MODEL)
-            self.net = NetworkClass(img_size=self.Config.INPUT_DIM,in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]),use_v2=True)
+            self.net = NetworkClass(img_size=self.Config.INPUT_DIM,in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]),use_v2=True, feature_size=self.Config.FEATURE_SIZE)
             # if self.Config.WEIGHTS_PATH:
             #     weight = torch.load(self.Config.WEIGHTS_PATH)
             #     self.net.load_from(weights=weight)
