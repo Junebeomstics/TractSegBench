@@ -62,6 +62,7 @@ class Config:
     VAL_BATCH_SIZE = 8
     NR_SLICES = 47
     USE_CONSECUTIVE_SLICES = False
+    FEATURE_SIZE = 24 # SwinUNETR
     
     SUBJECTS_PER_BATCH = 1
     LEARNING_RATE = 0.001
