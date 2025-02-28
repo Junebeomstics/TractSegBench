@@ -34,7 +34,7 @@ class Config(BaseConfig):
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
-    BATCH_SIZE = 4 #8 # 128 | 47 : number of slices per batch
+    BATCH_SIZE = 2 #8 # 128 | 47 : number of slices per batch
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True

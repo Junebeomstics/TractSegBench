@@ -184,7 +184,7 @@ def train_model(Config, model, run, scheduler=None):
                     utils.check_tensor_values(subject, x, y)
 
                     if Config.DIM == "2D":
-                        # currently, multiple subjects are not implemented for 2D, so please add batch dimension for subject
+                        # currently, multiple subjects are not implemented for 2D batchgenerator, so please add batch dimension for subject
                         x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y)
                         y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y)
 

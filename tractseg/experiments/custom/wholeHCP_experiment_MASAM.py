@@ -15,6 +15,7 @@ class Config(BaseConfig):
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
+    CLASSES = "Brainlife" # CLASSES should be changed with NR_OF_CLASSES
     N_GPU = 1 # 4
 
     MODEL = "MASAM"
@@ -44,7 +45,8 @@ class Config(BaseConfig):
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
     BATCH_SIZE = 1
-    NR_SLICES = 47
+    NR_SLICES = 74
+    USE_CONSECUTIVE_SLICES = False
     NUM_EPOCHS = 400
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True

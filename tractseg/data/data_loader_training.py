@@ -231,8 +231,8 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
 
         slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION) # if xyz, randomly choose one (1/3 per direction)
         #if data.shape[slice_direction] <= self.batch_size:
-        if data.shape[slice_direction] <= self.Config.NR_SLICES:
-            print("INFO: Batch size bigger than nr of slices. Therefore sampling with replacement.")
+        if data.shape[slice_direction] < self.Config.NR_SLICES:
+            print(f"INFO: NR slices ({self.Config.NR_SLICES}) bigger than the third dimension({data.shape[slice_direction]}). Therefore sampling with replacement.")
             #slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, True, None)
             slice_idxs = np.random.choice(data.shape[slice_direction], self.Config.NR_SLICES, True, None)
         else:

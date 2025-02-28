@@ -3,14 +3,13 @@
 #PBS -N tractseg
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
-#PBS -l walltime=12:00:00
+#PBS -l walltime=24:00:00
 #PBS -q preemptable
 #PBS -j oe
-#PBS -o /grand/NeuroX/junbeom/TractSegVis/TractSeg/logs
 
 module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 2 --config Zenedo_experiment_swinunetr --en run_with_default_settings_swinunetr --train True --test True --seg #--rt --with_id TRAC-176
+./ExpRunner --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D --en run_with_wholeHCP_MASAM3D_x5 --train True --test True --seg --rt --with_id TRAC-462
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

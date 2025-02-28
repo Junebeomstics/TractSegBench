@@ -11,5 +11,5 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --config Zenedo_experiment_sorted_aligned_x4 --en run_with_default_settings_sorted_aligned_x4 --train True --test True --seg
+./ExpRunner --fold 1 --config Zenedo_experiment_sorted_aligned_x4 --en run_with_default_settings_sorted_aligned_x4 --train True --test True --seg
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

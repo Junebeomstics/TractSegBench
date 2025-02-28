@@ -132,6 +132,7 @@ class BaseModel:
 
         if self.Config.COMPILE:
             self.net = torch.compile(self.net, dynamic=False)
+            
         if torch.cuda.device_count() > 1 and self.Config.USE_DP:
             print(f'Using DataParallel across {torch.cuda.device_count()} GPUs')
             self.net = nn.DataParallel(self.net)
@@ -164,7 +165,8 @@ class BaseModel:
             if self.Config.LR_SCHEDULE_TYPE == "ReduceLROnPlateau":
                 self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer,
                                                             mode=self.Config.LR_SCHEDULE_MODE,
-                                                            patience=self.Config.LR_SCHEDULE_PATIENCE)
+                                                            patience=self.Config.LR_SCHEDULE_PATIENCE, 
+                                                            factor=self.Config.LR_GAMMA, min_lr=1e-6)
             elif self.Config.LR_SCHEDULE_TYPE == "CosineAnnealingLR":
                 num_epochs = self.Config.NUM_EPOCHS #self.trainer.estimated_stepping_batches # ((number of samples/batch size)/number of gpus) * num_epochs
                 gamma = self.Config.LR_GAMMA
@@ -193,8 +195,8 @@ class BaseModel:
         #     self.net.conv_5 = nn.Conv2d(self.Config.UNET_NR_FILT, self.Config.NR_OF_CLASSES, kernel_size=1,
         #                                 stride=1, padding=0, bias=True).to(self.device)
     def train(self, X, y, weight_factor=None, timesteps=None, type=None):
-        X = X.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, features, x, y)
-        y = y.contiguous().cuda(self.device, non_blocking=True)  # (bs, slices, classes, x, y)
+        X = X.contiguous().cuda(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
+        y = y.contiguous().cuda(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
 
         if self.Config.DIM == "2D":
             if self.Config.RESIZE:
@@ -209,31 +211,38 @@ class BaseModel:
                 # final: (bs, slices, classes, x, y)
             
             if self.Config.MODEL == "MASAM":
+                print('X from dataloader',X.shape)
                 bs, slices, classes, w, h = y.shape
                 # if MASAM, do not combine batch and slices dimension in input (X).
                 y = y.view(bs * slices, -1, w, h) 
             else:
-                # if not MASAM, combine batch and slices dimension.
-                print(X.shape)
+                # if not MASAM, combine batch and slices dimension for both input (X) and output (y).
+                print('X from dataloader',X.shape)
                 bs, slices, features, w, h = X.shape
                 X = X.view(bs * slices, features, w, h)
                 y = y.view(bs * slices, -1, w, h) 
+                print('X to model',X.shape)
     
         elif self.Config.DIM == "3D":
+            #print('X from dataloader',X.shape)
             if self.Config.RESIZE:
                 X = F.interpolate(X, size=(self.Config.RESIZE, self.Config.RESIZE, self.Config.RESIZE), mode='trilinear', align_corners=False)
                 y = F.interpolate(y, size=(self.Config.RESIZE, self.Config.RESIZE, self.Config.RESIZE), mode='nearest')
-            
-            # if self.Config.MODEL == "MASAM":
-            #     bs, classes, w, h, d = y.shape
-            #     # if MASAM, do not combine batch and slices dimension in input (X).
-            #     y = y.transpose(0, 1).contiguous().view(bs * classes, w, h, d)
-            # else:
-            #     # if not MASAM, combine batch and slices dimension.
-            #     print(X.shape)
-            #     bs, features, w, h, d = X.shape
-            #     X = X.view(bs * slices, features, w, h)
-            #     y = y.view(bs * slices, -1, w, h) 
+            if self.Config.MODEL == "MASAM":
+                # consistently choose the first spatial dimension for slices.
+                bs, features, w, h, d = y.shape
+                if self.Config.SAM_SLICE_DIRECTION == "x":
+                    X = X.permute(0, 2, 1, 3, 4) # (bs, nr_of_channels, x, y, z) -> (bs, x, nr_of_channels, y, z)
+                    y = y.permute(0, 2, 1, 3, 4) # (bs, nr_of_channels, x, y, z) -> (bs, x, nr_of_channels, y, z)
+                    y = y.contiguous().view(-1, features, h, d)
+                elif self.Config.SAM_SLICE_DIRECTION == "y":
+                    X = X.permute(0, 3, 1, 2, 4) # (bs, nr_of_channels, x, y, z) -> (bs, y, nr_of_channels, x, z)
+                    y = y.permute(0, 3, 1, 2, 4) # (bs, nr_of_channels, x, y, z) -> (bs, y, nr_of_channels, x, z)
+                    y = y.contiguous().view(-1, features, w, d)
+                elif self.Config.SAM_SLICE_DIRECTION == "z":
+                    X = X.permute(0, 4, 1, 2, 3) # (bs, nr_of_channels, x, y, z) -> (bs, z, nr_of_channels, x, y)
+                    y = y.permute(0, 4, 1, 2, 3) # (bs, nr_of_channels, x, y, z) -> (bs, z, nr_of_channels, x, y)
+                    y = y.contiguous().view(-1, features, w, h)
 
         if type == 'train' or self.Config.DROPOUT_SAMPLING:  
             self.net.train()

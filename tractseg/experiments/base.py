@@ -69,8 +69,8 @@ class Config:
     LR_SCHEDULE = True
     LR_SCHEDULE_TYPE = "ReduceLROnPlateau" # ReduceLROnPlateau | CosineAnnealingLR
     LR_SCHEDULE_MODE = "min"  # min | max
-    LR_SCHEDULE_PATIENCE = 10
-    LR_GAMMA = 0.8 # only for CosineAnnealingLR
+    LR_SCHEDULE_PATIENCE = 10 # only for ReduceLROnPlateau
+    LR_GAMMA = 0.8 # for both ReduceLROnPlateau | CosineAnnealingLR
     LR_WARMUP_RATIO = 0.01 # only for CosineAnnealingLR
     LR_CYCLE = 1 # only for CosineAnnealingLR # size of the first cycle
     LR_T_MULT = -1 # only for CosineAnnealingLR 

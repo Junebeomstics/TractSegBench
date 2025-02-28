@@ -44,4 +44,5 @@ class Config(BaseConfig):
     NUM_PROCESSES = 8
     RESIZE = 160
     LR_SCHEDULE_TYPE = "CosineAnnealingLR"
+    GRADIENT_CLIP = 1
     

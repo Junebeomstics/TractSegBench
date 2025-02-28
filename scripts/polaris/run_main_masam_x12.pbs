@@ -12,5 +12,7 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 2 --config Zenedo_experiment_swinunetr --en run_with_default_settings_swinunetr --train True --test True --seg #--rt --with_id TRAC-176
+# use dataloader in x10, but use consecutive slices
+./ExpRunner --config Zenedo_experiment_MASAM_x12_x3 --en run_with_default_settings_MASAM_x12_x3 --train True --test True  --lw  # --use_dp #--only_val #--seg
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
