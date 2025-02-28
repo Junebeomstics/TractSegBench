@@ -179,14 +179,14 @@ def train_model(Config, model, run, scheduler=None):
                     batch_nr[type] += 1
 
                     subject = batch["subject"]
-                    x = batch["data"]  # (nr_slices, nr_of_channels, x, y)
-                    y = batch["seg"]  # (nr_slices, nr_of_classes, x, y)
+                    x = batch["data"]  # (nr_slices, nr_of_channels, x, y) for 2D and (batch_size, nr_of_channels, x, y, z) for 3D 
+                    y = batch["seg"]  # (nr_slices, nr_of_classes, x, y) for 2D and (batch_size, nr_of_classes, x, y, z) for 3D 
                     utils.check_tensor_values(subject, x, y)
 
                     if Config.DIM == "2D":
                         # currently, multiple subjects are not implemented for 2D batchgenerator, so please add batch dimension for subject
-                        x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y)
-                        y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y)
+                        x = torch.unsqueeze(x,0) # (1, nr_slices, nr_of_channels, x, y) # batch size = 1
+                        y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y) # batch size = 1
 
 
                     if Config.MODEL == "LatentDiffusionModel":
