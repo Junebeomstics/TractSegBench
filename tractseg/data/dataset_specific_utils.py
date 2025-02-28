@@ -382,11 +382,21 @@ def get_cv_fold(Config):
     fold=Config.CV_FOLD
     dataset=Config.DATASET
     if dataset == "HCP_all" or dataset == "HCP_vis": # all_subjects_HCP_all (1061 subjects are used) 
+        # 1061 subjects are loaded in the fixed order.
         subjects = [subject for subject in get_all_subjects(dataset) if os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.FEATURES_FILENAME+'.nii.gz')) and os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.LABELS_FILENAME+'.nii.gz')) ]
         print('len(subjects)',len(subjects))
+        # fifteen percent of validate subjects and fiften percent of test subjects
         cut_point_1 = int(len(subjects) * 0.7)
         cut_point_2 = int(len(subjects) * 0.85)
-        return subjects[:cut_point_1], subjects[cut_point_1:cut_point_2], subjects[cut_point_2:]
+
+        TEST_SUBJECTS = subjects[cut_point_2:] # use fixed set of test subjects
+        TRAIN_VALIDATE_SUBJECTS = subjects[:cut_point_2] # use fixed set of train and validate subjects
+        if fold == 0:
+            return TRAIN_VALIDATE_SUBJECTS[:cut_point_1], TRAIN_VALIDATE_SUBJECTS[cut_point_1:cut_point_2], TEST_SUBJECTS
+        elif fold > 0:
+            rng = np.random.default_rng(fold)  
+            rng.shuffle(TRAIN_VALIDATE_SUBJECTS)
+            return TRAIN_VALIDATE_SUBJECTS[:cut_point_1],TRAIN_VALIDATE_SUBJECTS[cut_point_1:], TEST_SUBJECTS
     elif dataset == "HCP_90g": # all_subjects_FINAL_with_complete_90g (1049 subjects are used)
         subjects = get_all_subjects(dataset)
         cut_point = int(len(subjects) * 0.7)
@@ -398,14 +408,23 @@ def get_cv_fold(Config):
     else: # dataset == "HCP" goes here, which means that only 105 subjects are used (all_subjects_FINAL)
         if fold == 0:
             train, validate, test = [0, 1, 2], [3], [4]
+        # elif fold == 1:
+        #     train, validate, test = [1, 2, 3], [4], [0]
+        # elif fold == 2:
+        #     train, validate, test = [2, 3, 4], [0], [1]
+        # elif fold == 3:
+        #     train, validate, test = [3, 4, 0], [1], [2]
+        # elif fold == 4:
+        #     train, validate, test = [4, 0, 1], [2], [3]
+        # use fixed set of test subjects
         elif fold == 1:
-            train, validate, test = [1, 2, 3], [4], [0]
+            train, validate, test = [1, 2, 3], [0], [4]
         elif fold == 2:
-            train, validate, test = [2, 3, 4], [0], [1]
+            train, validate, test = [0, 2, 3], [1], [4]
         elif fold == 3:
-            train, validate, test = [3, 4, 0], [1], [2]
+            train, validate, test = [0, 1, 3], [2], [4]
         elif fold == 4:
-            train, validate, test = [4, 0, 1], [2], [3]
+            train, validate, test = [0, 1, 2], [3], [4]
 
         subjects = get_all_subjects(dataset) # only 105 subjects are used (all_subjects_FINAL)
         if dataset.startswith("HCP"):
