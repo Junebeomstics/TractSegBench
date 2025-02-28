@@ -61,7 +61,13 @@ def load_training_data(Config, subject):
         data = nib.load(filepath + ".nii.gz").get_fdata()
         # data = np.load(filepath + ".npy", mmap_mode="r")
         return data
-    if Config.FEATURES_FILENAME == "12g90g270g":
+    if Config.FEATURES_FILENAME == "90g270g":
+        rnd_choice = np.random.random()
+        if rnd_choice < 0.5:
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+        else:
+            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    elif Config.FEATURES_FILENAME == "12g90g270g":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
@@ -69,7 +75,6 @@ def load_training_data(Config, subject):
             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
         else:
             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
-
     elif Config.FEATURES_FILENAME == "12g90g270gRaw32g":
         rnd_choice = np.random.random()
         if rnd_choice < 0.33:
@@ -232,9 +237,11 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION) # if xyz, randomly choose one (1/3 per direction)
         #if data.shape[slice_direction] <= self.batch_size:
         if data.shape[slice_direction] < self.Config.NR_SLICES:
-            print(f"INFO: NR slices ({self.Config.NR_SLICES}) bigger than the third dimension({data.shape[slice_direction]}). Therefore sampling with replacement.")
+            #print(f"INFO: NR slices ({self.Config.NR_SLICES}) bigger than the third dimension({data.shape[slice_direction]}). Therefore sampling with replacement.")
             #slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, True, None)
             slice_idxs = np.random.choice(data.shape[slice_direction], self.Config.NR_SLICES, True, None)
+            # if NR_SLICES are bigger than data shape, just use all slices without shuffling
+            #slice_idxs = np.arange(data.shape[slice_direction]) #np.random.permutation(data.shape[slice_direction])
         else:
             #slice_idxs = np.random.choice(data.shape[slice_direction], self.batch_size, False, None)
             slice_idxs = np.random.choice(data.shape[slice_direction], self.Config.NR_SLICES, False, None)
@@ -265,6 +272,7 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         if self.Config.PAD_TO_SQUARE:
             #Crop and pad to input size
             x, y = crop(x, y, crop_size=self.Config.INPUT_DIM)  # does not work with img with batches and channels
+            # output is torch.tensor
         else:
             # Works -> results as good?
             # Will pad each axis to be multiple of 16. (Each sample can end up having different dimensions. Also x and y
@@ -278,7 +286,6 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         y = y.astype(np.float32)
 
         # possible optimization: sample slices from different patients and pad all to same size (size of biggest)
-
         data_dict = {"subject": subjects[subject_idx],
                     "data": x,  # (NR_SLICES, channels, x, y, [z])
                      "seg": y, # (NR_SLICES, channels, x, y, [z])
@@ -322,14 +329,14 @@ class DataLoaderTraining:
                 # patch_center_dist_from_border:
                 #   if 144/2=72 -> always exactly centered; otherwise a bit off center
                 #   (brain can get off image and will be cut then)
-                if self.Config.DAUG_SCALE:
-
+                if self.Config.DAUG_SCALE: # True by default
                     if self.Config.INPUT_RESCALING:
                         source_mm = 2  # for bb
                         target_mm = float(self.Config.RESOLUTION[:-2])
                         scale_factor = target_mm / source_mm
                         scale = (scale_factor, scale_factor)
                     else:
+                        # random rescaling <- by default
                         scale = (0.9, 1.5)
 
                     if self.Config.PAD_TO_SQUARE:
@@ -356,25 +363,25 @@ class DataLoaderTraining:
                                                 p_rot_per_sample=self.Config.P_SAMP,
                                                 p_scale_per_sample=self.Config.P_SAMP))
 
-                if self.Config.DAUG_RESAMPLE:
+                if self.Config.DAUG_RESAMPLE: # False by default
                     tfs.append(SimulateLowResolutionTransform(zoom_range=(0.5, 1), p_per_sample=0.2, per_channel=False))
 
-                if self.Config.DAUG_RESAMPLE_LEGACY:
+                if self.Config.DAUG_RESAMPLE_LEGACY: # False by default
                     tfs.append(ResampleTransformLegacy(zoom_range=(0.5, 1)))
 
-                if self.Config.DAUG_GAUSSIAN_BLUR:
+                if self.Config.DAUG_GAUSSIAN_BLUR: # True by default
                     tfs.append(GaussianBlurTransform(blur_sigma=self.Config.DAUG_BLUR_SIGMA,
                                                      different_sigma_per_channel=False,
                                                      p_per_sample=self.Config.P_SAMP))
 
-                if self.Config.DAUG_NOISE:
+                if self.Config.DAUG_NOISE: # True by default
                     tfs.append(GaussianNoiseTransform(noise_variance=self.Config.DAUG_NOISE_VARIANCE,
                                                       p_per_sample=self.Config.P_SAMP))
 
-                if self.Config.DAUG_MIRROR:
+                if self.Config.DAUG_MIRROR: #  False by default
                     tfs.append(MirrorTransform())
 
-                if self.Config.DAUG_FLIP_PEAKS:
+                if self.Config.DAUG_FLIP_PEAKS: #  False by default
                     tfs.append(FlipVectorAxisTransform())
             
             # if self.Config.RESIZE_TO_512:
