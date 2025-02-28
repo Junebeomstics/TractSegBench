@@ -80,6 +80,7 @@ class Config:
     EPOCH_MULTIPLIER = 1  # 2D: 1, 3D: 12 for lowRes, 3 for highRes
     NUM_EPOCHS = 250
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
+    SAM_SLICE_DIRECTION = "x"
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     LOSS_FUNCTION = "default"  # default | soft_batch_dice
     OPTIMIZER = "Adamax"
