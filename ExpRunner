@@ -23,6 +23,7 @@ import pickle as pkl
 from pprint import pprint
 import distutils.util
 from os.path import join
+import glob
 
 import nibabel as nib
 import numpy as np
@@ -199,11 +200,12 @@ def main():
     if Config.TRAIN and not Config.ONLY_VAL:
         # Have to load other weights, because after training it has the weights of the last epoch
         print("Loading best epoch: {}".format(Config.BEST_EPOCH))
-        Config.WEIGHTS_PATH = Config.EXP_PATH + "/best_weights_ep" + str(Config.BEST_EPOCH) + ".npz"
+        #Config.WEIGHTS_PATH = Config.EXP_PATH + "/best_weights_ep" + str(Config.BEST_EPOCH) + ".npz"
+        Config.WEIGHTS_PATH = sorted(glob.glob(join(Config.EXP_PATH,'best_weights_ep*')))[-1]
         Config.LOAD_WEIGHTS = True
-        model.load_model(join(Config.EXP_PATH, Config.WEIGHTS_PATH))
+        model.load_model(Config.WEIGHTS_PATH)
         model_test = model
-    else: # Config.ONLY_VAL = True
+    else: # not Config.TRAIN or Config.ONLY_VAL = True
         # Weight_path already set to best model (when reading program parameters) -> will be loaded automatically
         model_test = model
 
@@ -212,15 +214,6 @@ def main():
         all_subjects = Config.VALIDATE_SUBJECTS
         for subject in all_subjects:
             print("Get_segmentation subject {}".format(subject))
-
-            # if Config.EXPERIMENT_TYPE == "peak_regression":
-            #    data_loader = DataLoaderInference(Config, subject=subject)
-            #    img_probs, img_y = trainer.predict_img(Config, model_test, data_loader,
-            #                                           probs=True)  # only x or y or z
-            #    img_seg = peak_utils.peak_image_to_binary_mask(img_probs,
-            #                                                  len_thr=0.4)  # thr: 0.4 slightly better than 0.2
-            #else:
-                # returns probs not binary seg
             img_seg, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject)
             img_seg = direction_merger.mean_fusion(Config.THRESHOLD, img_seg, probs=False)
 
@@ -229,7 +222,7 @@ def main():
             nib.save(img, join(Config.EXP_PATH, "segmentations", subject + "_segmentation.nii.gz"))
 
     if Config.TEST:
-        trainer.test_whole_subject(Config, model_test, Config.VALIDATE_SUBJECTS, "validate")
+        trainer.test_whole_subject(Config, model_test, Config.TEST_SUBJECTS, "test")
 
     if Config.GET_PROBS:
         exp_utils.make_dir(join(Config.EXP_PATH, "probmaps"))
