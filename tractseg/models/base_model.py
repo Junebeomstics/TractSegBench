@@ -91,6 +91,14 @@ class BaseModel:
             #     weight = torch.load(self.Config.WEIGHTS_PATH)
             #     self.net.load_from(weights=weight)
             #     print("Using pretrained self-supervied Swin UNETR backbone weights !")
+        elif self.Config.MODEL.lower() == 'nnformer':
+            NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
+                                   self.Config.MODEL)
+            self.net = NetworkClass(img_size=self.Config.INPUT_DIM,in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]),use_v2=True, feature_size=self.Config.FEATURE_SIZE)
+            # if self.Config.WEIGHTS_PATH:
+            #     weight = torch.load(self.Config.WEIGHTS_PATH)
+            #     self.net.load_from(weights=weight)
+            #     print("Using pretrained self-supervied Swin UNETR backbone weights !")
         elif self.Config.MODEL == 'LatentDiffusionModel':
             NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
                                    self.Config.MODEL)
@@ -211,17 +219,17 @@ class BaseModel:
                 # final: (bs, slices, classes, x, y)
             
             if self.Config.MODEL == "MASAM":
-                print('X from dataloader',X.shape)
+                #print('X from dataloader',X.shape)
                 bs, slices, classes, w, h = y.shape
                 # if MASAM, do not combine batch and slices dimension in input (X).
                 y = y.view(bs * slices, -1, w, h) 
             else:
                 # if not MASAM, combine batch and slices dimension for both input (X) and output (y).
-                print('X from dataloader',X.shape)
+                #print('X from dataloader',X.shape)
                 bs, slices, features, w, h = X.shape
                 X = X.view(bs * slices, features, w, h)
                 y = y.view(bs * slices, -1, w, h) 
-                print('X to model',X.shape)
+                #print('X to model',X.shape)
     
         elif self.Config.DIM == "3D":
             #print('X from dataloader',X.shape)
@@ -499,6 +507,7 @@ class BaseModel:
                                               epoch=epoch_nr,unet=self.net, optimizer=self.optimizer, scheduler=self.scheduler)
             except IOError:
                 print("\nERROR: Could not save weights because of IO Error\n")
+            self.Config.BEST_EPOCH = epoch_nr
 
     def load_model(self, path):
         if self.Config.RESET_LAST_LAYER:
