@@ -108,12 +108,15 @@ class BaseModel:
                 self.net.load_from(weights=weight)
                 print("Using pretrained self-supervied Swin UNETR backbone weights !")
         elif self.Config.MODEL == 'MASAM':
+            # note that previously, it automatically loaded weight from WEIGHTS_PATH if RESUME_TRAINING is False
+            # for now, you should specify LOAD_WEIGHTS as True to load weight for WEIGHTS_PATH
             sam, img_embedding_size = sam_model_registry[self.Config.vit_name](image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE,
                                                                 num_classes=self.Config.NR_OF_CLASSES-1,
-                                                                checkpoint=self.Config.WEIGHTS_PATH if self.Config.RESUME_TRAINING==False else None, in_chans=9, pixel_mean=[0., 0., 0.],
+                                                                checkpoint=self.Config.WEIGHTS_PATH if (not self.Config.RESUME_TRAINING) and (self.Config.LOAD_WEIGHTS) else None, in_chans=9, pixel_mean=[0., 0., 0.],
                                                                 pixel_std=[1., 1., 1.])
             pkg = import_module(self.Config.module)
             self.net = pkg.Fact_tt_Sam(sam, self.Config.rank, s=self.Config.scale)
+            self.Config.LOAD_WEIGHTS = False # set to False to avoid loading weight by default pytorch load_checkpoint, but use its own way of loading weights
 
         elif self.Config.MODEL.lower() == 'monai_unet':
             self.net = UNet(in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]), channels=(4, 8, 16), strides=(2, 2))
@@ -184,19 +187,16 @@ class BaseModel:
                 T_mult = self.Config.LR_T_MULT
                 self.scheduler = CosineAnnealingWarmUpRestarts(self.optimizer, first_cycle_steps=T_0, cycle_mult=T_mult, max_lr=base_lr,min_lr=1e-9, warmup_steps=warmup, gamma=gamma)
 
-        if self.Config.LOAD_WEIGHTS:
-            exp_utils.print_verbose(self.Config.VERBOSE, "Loading weights ... ({})".format(join(self.Config.EXP_PATH,
-                                                                                        self.Config.WEIGHTS_PATH)))
-            # load model weights, optimizer state, scheduler state, epoch
-            self.load_model(join(self.Config.EXP_PATH, self.Config.WEIGHTS_PATH))
-
-        elif self.Config.RESUME_TRAINING:
+        if self.Config.RESUME_TRAINING:
             exp_utils.print_verbose(self.Config.VERBOSE, "Loading checkpoints ... ({})".format(join(self.Config.EXP_PATH,
                                                                                         self.Config.WEIGHTS_PATH)))
             # load model weights, optimizer state, scheduler state, epoch
             self.load_checkpoint(join(self.Config.EXP_PATH, self.Config.WEIGHTS_PATH))
-
-    
+        elif self.Config.LOAD_WEIGHTS and self.Config.WEIGHTS_PATH:
+            exp_utils.print_verbose(self.Config.VERBOSE, "Loading weights ... ({})".format(join(self.Config.EXP_PATH,
+                                                                                        self.Config.WEIGHTS_PATH)))
+            # load model weights, optimizer state, scheduler state, epoch
+            self.load_model(join(self.Config.EXP_PATH, self.Config.WEIGHTS_PATH))
 
         # Reset weights of last layer for transfer learning
         # if self.Config.RESET_LAST_LAYER:

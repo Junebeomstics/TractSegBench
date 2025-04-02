@@ -21,10 +21,11 @@ class Config(BaseConfig):
     rank = 32
     scale = 1
     module = "sam_fact_tt_image_encoder"
-    vit_name = 'vit_b'
+    vit_name = 'vit_l'
     COMPILE = True
     DIM = "3D"  # 2D | 3D
-    INPUT_DIM = (144,144,144) # Replace img_size
+    INPUT_DIM = (128,144,128) # Replace img_size
+    SAM_SLICE_DIRECTION = "y"
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  

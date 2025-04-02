@@ -15,7 +15,6 @@ class Config(BaseConfig):
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
     LABELS_FILENAME = "sorted_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 72 # number of output channel
-    NR_SLICES = 1 
     COMPILE = True
 
     MODEL = "SwinUNETR"
@@ -35,11 +34,13 @@ class Config(BaseConfig):
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
-    BATCH_SIZE = 47 # 128 | 47 : number of slices per batch
+    BATCH_SIZE = 1 # 128 | 47 : number of slices per batch
+    NR_SLICES = 47
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
+    LOG_PER_BUNDLE = True
 
     os.environ["TRITON_MAX_BLOCK_X"] = "4096"

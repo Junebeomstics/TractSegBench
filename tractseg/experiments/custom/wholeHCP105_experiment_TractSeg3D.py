@@ -9,7 +9,7 @@ from tractseg.experiments.base import Config as BaseConfig
 class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
-    DATASET = "HCP_all"  # HCP (105) | HCP_all (1061) | HCP_vis
+    DATASET = "HCP"  # HCP (105) | HCP_all (1061) | HCP_vis
     DATA_PATH= "/pscratch/sd/j/junbeom/"
     DATASET_FOLDER = "HCP_preproc_brainlife_fixed" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
@@ -17,7 +17,7 @@ class Config(BaseConfig):
     NR_OF_CLASSES = 61 # number of output channel
     NR_SLICES = 1
     BATCH_SIZE = 2 # 128 | 47 : number of slices per batch
-    COMPILE = False
+    COMPILE = True
     CLASSES = "Brainlife"
 
     MODEL = "UNet3D_Pytorch_DeepSup_sm"
@@ -36,7 +36,7 @@ class Config(BaseConfig):
    
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
-    FP16 = False # True 시 validation 시에 index error 발생
+    FP16 = True # True 시 validation 시에 index error 발생
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
     LR_SCHEDULE = True

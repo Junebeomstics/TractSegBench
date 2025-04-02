@@ -11,5 +11,5 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM --en run_with_wholeHCP_MASAM --train True --test True --seg --lw
+./ExpRunner --fold 1 --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM --en run_with_wholeHCP_MASAM --train True --test True --seg --lw
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

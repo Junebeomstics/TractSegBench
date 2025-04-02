@@ -11,6 +11,6 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-# try 128/128 spatial dim with slice_direction="y"
+# try 128/128 spatial dim with slice_direction="y", with model size vit_h
 ./ExpRunner --weights_path "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_h_4b8939.pth" --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D_x4 --en run_with_wholeHCP_MASAM3D --train True --test True --seg --lw
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

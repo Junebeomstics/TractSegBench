@@ -9,11 +9,11 @@ from tractseg.experiments.base import Config as BaseConfig
 class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
-    DATASET = "HCP_all"  # HCP (105) | HCP_all (1061) | HCP_vis
+    DATASET = "CamCan"  # HCP (105) | HCP_all (1061) | HCP_vis
     DATA_PATH= "/pscratch/sd/j/junbeom/"
-    DATASET_FOLDER = "HCP_preproc_brainlife_fixed" # "HCP_for_training"
+    DATASET_FOLDER = "CamCan_preproc_brainlife_fixed" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
-    LABELS_FILENAME = "aligned_corrected_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
+    LABELS_FILENAME = "corrected_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
     NR_SLICES = 1
     BATCH_SIZE = 2 # 128 | 47 : number of slices per batch

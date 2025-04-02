@@ -16,24 +16,41 @@ import numpy as np
 from tractseg.libs.system_config import SystemConfig as C
 
 
-def create_experiment_folder(experiment_name, multi_parent_path, train):
+def create_experiment_folder(Config):
     """
     Create a new experiment folder. If it already exists, create new one with increasing number at the end.
-    If not training model (only predicting): Use existing folder
+    If only predicting or resuming from pretrained checkpoints: Use existing folder
     """
-    if multi_parent_path != "":
-        dir = join(multi_parent_path, experiment_name)
-    else:
-        dir = join(C.EXP_PATH, experiment_name)
+    experiment_name = Config.EXP_NAME
+    train = Config.TRAIN
 
+    # DEFAULT_EXP_PATH = os.path.join(Config.HOME, "hcp_exp")
+    dir = join(Config.DEFAULT_EXP_PATH, experiment_name)
+
+    if Config.RESUME_TRAINING:
+        if os.path.exists(dir):
+            print("Resuming training from existing experiment folder")
+            return dir
+        else:
+            sys.exit('Testing target directory does not exist!')
+    if Config.ONLY_VAL:
+        if os.path.exists(dir):
+            print("Running validation from existing experiment folder")
+            return dir
+        else:
+            os.makedirs(dir)
+            return dir
     if not train:
         if os.path.exists(dir):
             return dir
         else:
-            sys.exit('Testing target directory does not exist!')
-    else:
+            os.makedirs(dir)
+            return dir
+    else: # Training from scratch
         for i in range(100):
             if os.path.exists(dir):
+                # check if experiment name already exists
+                print("Experiment folder already exists. Creating new one with increasing number at the end.")
                 tailing_numbers = re.findall('x([0-9]+)$', experiment_name)  # find tailing numbers that start with a x
                 if len(tailing_numbers) > 0:
                     num = int(tailing_numbers[0])
@@ -42,12 +59,11 @@ def create_experiment_folder(experiment_name, multi_parent_path, train):
                     else:
                         experiment_name = experiment_name[:-2] + str(num+1)
                 else:
-                    experiment_name += "_x2"
+                    # if no tailing numbers, add x1
+                    experiment_name += "_x1"
 
-                if multi_parent_path != "":
-                    dir = join(multi_parent_path, experiment_name)
-                else:
-                    dir = join(C.EXP_PATH, experiment_name)
+                # update experiment name
+                dir = join(Config.DEFAULT_EXP_PATH, experiment_name)
             else:
                 os.makedirs(dir)
                 break

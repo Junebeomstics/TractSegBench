@@ -11,9 +11,9 @@ class Config(BaseConfig):
 
     DATASET = "HCP_all"  # HCP (105) | HCP_all (1061) | HCP_vis
     DATA_PATH= "/pscratch/sd/j/junbeom/"
-    DATASET_FOLDER = "HCP_preproc_brainlife" # "HCP_for_training"
+    DATASET_FOLDER = "HCP_preproc_brainlife_fixed" # "HCP_for_training"
     FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
-    LABELS_FILENAME = "bundle_masks" # if not set, predefined LABELS_FILENAME is used.
+    LABELS_FILENAME = "aligned_corrected_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
     CLASSES = "Brainlife" # CLASSES should be changed with NR_OF_CLASSES
     N_GPU = 1 # 4
@@ -26,7 +26,7 @@ class Config(BaseConfig):
     COMPILE = True
     DIM = "3D"  # 2D | 3D
     INPUT_DIM = (144,144,144) # Replace img_size
-    SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
+    SLICE_DIRECTION = "x"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
     WEIGHTS_PATH = "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/checkpoints/sam_vit_l_0b3195.pth" # "/global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/model_swinvit.pt"

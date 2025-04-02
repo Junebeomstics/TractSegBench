@@ -140,9 +140,11 @@ def _build_sam(
             state_dict = torch.load(f)
         try:
             sam.load_state_dict(state_dict)
+            print("weight is loaded from load_state_dict function in sam")
         except:
             new_state_dict = load_from(sam, state_dict, image_size, vit_patch_size, encoder_global_attn_indexes)
             sam.load_state_dict(new_state_dict)
+            print("Model weight is loaded from load_from function in sam, changing mask_tokens, output_hypernetworks_mlps, iou_prediction_head")
     return sam, image_embedding_size
 
 
@@ -156,7 +158,6 @@ def load_from(sam, state_dict, image_size, vit_patch_size, encoder_global_attn_i
     pos_embed = new_state_dict['image_encoder.pos_embed']
     token_size = int(image_size // vit_patch_size)
     if pos_embed.shape[1] != token_size:
-        
         pos_embed = pos_embed.permute(0, 3, 1, 2)  # [b, c, h, w]
         pos_embed = F.interpolate(pos_embed, (token_size, token_size), mode='bilinear', align_corners=False)
         pos_embed = pos_embed.permute(0, 2, 3, 1)  # [b, h, w, c]

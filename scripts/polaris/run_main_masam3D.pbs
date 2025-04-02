@@ -3,13 +3,20 @@
 #PBS -N tractseg
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
-#PBS -l walltime=1:00:00
-#PBS -q debug
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
 #PBS -j oe
 
 module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --weights_path "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_b_01ec64.pth" --data_path /grand/NeuroX/junbeom/TractSegVis --config Zenedo_experiment_MASAM3D --en run_with_MASAM3D --train True --test True --seg --lw
+#./ExpRunner --fold 0 --weights_path "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth" --data_path /grand/NeuroX/junbeom/TractSegVis --config Zenedo_experiment_MASAM3D --en run_with_MASAM3D_x7 --train True --test True --seg --rt --with_id TRAC-515
+
+./ExpRunner --fold 1 --weights_path "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth" --data_path /grand/NeuroX/junbeom/TractSegVis --config Zenedo_experiment_MASAM3D --en run_with_MASAM3D_x8 --train True --test True --seg --rt --with_id TRAC-516
+
+#./ExpRunner --fold 2 --weights_path "/grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth" --data_path /grand/NeuroX/junbeom/TractSegVis --config Zenedo_experiment_MASAM3D --en run_with_MASAM3D_x9 --train True --test True --seg --rt --with_id TRAC-519
+
+
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

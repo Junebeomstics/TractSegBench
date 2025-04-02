@@ -95,15 +95,16 @@ def train_model(Config, model, run, scheduler=None):
         batch_gen_test = data_loader.get_batch_generator(batch_size=Config.BATCH_SIZE, type="test",
                                                         subjects=getattr(Config, "TEST_SUBJECTS"))
 
+    types = ["validate"] if Config.ONLY_VAL else ["train", "validate", "test"]
+    if Config.ONLY_VAL:
+        Config.NUM_EPOCHS = 1
+
     for epoch_nr in range(Config.BEST_EPOCH,Config.NUM_EPOCHS):
         start_time = time.time()
 
         timings = defaultdict(lambda: 0) 
         batch_nr = defaultdict(lambda: 0) # 매 epoch마다 초기화
         weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
-        types = ["validate"] if Config.ONLY_VAL else ["train", "validate", "test"]
-
-       
         
         for type in types:
             print(f"Start looping {type} batches in epoch {epoch_nr}...")
@@ -304,8 +305,7 @@ def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=Tr
 
         if scale_to_world_shape:
             layers = dataset_specific_utils.scale_input_to_original_shape(layers, Config.DATASET, Config.RESOLUTION)
-
-        assert (layers.dtype == np.float32)
+        # assert (layers.dtype == np.float32)
         return layers
 
     img_shape = [Config.INPUT_DIM[0], Config.INPUT_DIM[0], Config.INPUT_DIM[0], Config.NR_OF_CLASSES]
@@ -406,7 +406,7 @@ def test_whole_subject(Config, model, subjects, type):
         start_time = time.time()
 
         data_loader = DataLoaderInference(Config, subject=subject)
-        img_probs, img_y = predict_img(Config, model, data_loader, probs=True)
+        img_probs, img_y = predict_img(Config, model, data_loader, probs=True, scale_to_world_shape=False)
         # img_probs_xyz, img_y = DirectionMerger.get_seg_single_img_3_directions(Config, model, subject=subject)
         # img_probs = DirectionMerger.mean_fusion(Config.THRESHOLD, img_probs_xyz, probs=True)
 

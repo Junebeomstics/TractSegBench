@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 #PBS -A NeuroX
-#PBS -N tractseg
+#PBS -N masam3D
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
 #PBS -l walltime=24:00:00
@@ -12,5 +12,9 @@ module use /soft/modulefiles; module load conda; conda activate masam
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
 # use different lr scheduler
-./ExpRunner --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D_x1 --en run_with_wholeHCP_MASAM3D --train True --test True --seg --lw
+#./ExpRunner --fold 0 --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D_x1 --en run_with_wholeHCP_MASAM3D --train True --test True --seg --lw #--rt --with_id TRAC-484
+./ExpRunner --fold 1 --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D_x1 --en run_with_wholeHCP_MASAM3D --train True --test True --seg --lw #--rt --with_id TRAC-513
+#./ExpRunner --fold 2 --weights_path /grand/NeuroX/junbeom/MA-SAM/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_MASAM3D_x1 --en run_with_wholeHCP_MASAM3D --train True --test True --seg --lw #--rt --with_id TRAC-514
+
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

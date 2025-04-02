@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 from os.path import join
 
 from tractseg.libs.system_config import SystemConfig as C
@@ -83,8 +84,7 @@ all_subjects_Schizo = ['CH7912a', 'A00014804', 'A00020805', 'A00010684', 'CH8301
                        'A00009642', 'A00018317', 'A00018451', 'CH3098', 'A00019018', 'A00011725', 'CH8126b',
                        'A00019877', 'A00031279', 'A00026907', 'CH8033a', 'A00023330', 'A00002191', 'A00011265',
                        'A00028885', 'CH7957', 'A00018403', 'CH7944a', 'A00036455', 'A00031249', 'A00000159', 'CH7692a',
-                       'A00000300', 'A00000456', 'A00014830', 'A00012767', 'A00014607']
-
+                       'A00000300', 'A00000456', 'A00014830', 'A00012767', 'A00014607'] 
 
 def all_subjects_biobank_20k():
     base_path = join(C.DATA_PATH, "biobank_preproc")
@@ -103,7 +103,8 @@ all_subjects_FINAL_with_complete_90g = [s for s in all_subjects_FINAL if s not i
 
 all_subjects_FINAL_with_complete_vis = [s for s in all_subjects_HCP_all if s not in subjects_vis_incomplete]
 
-def get_all_subjects(dataset="HCP"):
+def get_all_subjects(Config):
+    dataset = Config.DATASET
     if dataset == "HCP" or dataset == "HCP_final" or dataset == "HCP_32g":
         return all_subjects_FINAL
     elif dataset == "HCP_90g": # all HCP subjects except belonging to 90g incomplete
@@ -119,4 +120,10 @@ def get_all_subjects(dataset="HCP"):
     elif dataset.startswith("biobank_10"):
         return all_subjects_biobank_10 * 10
     else:
-        raise ValueError("Invalid dataset name")
+        all_subjects_any = sorted(os.listdir(join(Config.DATA_PATH,Config.DATASET_FOLDER)))
+        print(f"Subject list of {dataset} not pre-defined, returning all {len(all_subjects_any)} subjects available in the folder")
+        
+        if len(all_subjects_any) == 0:
+            raise ValueError("Invalid dataset name")
+        else:
+            return all_subjects_any

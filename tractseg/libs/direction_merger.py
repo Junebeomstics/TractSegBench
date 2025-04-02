@@ -27,7 +27,7 @@ def get_seg_single_img_3_directions(Config, model, subject=None, data=None, scal
         img_probs, img_y = trainer.predict_img(Config, model, dataManagerSingle, probs=True,
                                                scale_to_world_shape=scale_to_world_shape,
                                                only_prediction=only_prediction,
-                                               batch_size=batch_size)    # (x, y, z, nr_classes)
+                                               batch_size=batch_size) #Config.NR_SLICES if Config.DIM == "2D" else Config.BATCH_SIZE)    # (x, y, z, nr_classes)
         prob_slices.append(img_probs)
 
     probs_x, probs_y, probs_z = prob_slices

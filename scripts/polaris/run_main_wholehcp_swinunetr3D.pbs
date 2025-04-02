@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 #PBS -A NeuroX
-#PBS -N tractseg
+#PBS -N swinunetr3D
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
 #PBS -l walltime=24:00:00
@@ -11,5 +11,10 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D_x5 --train True --test True --seg --rt --with_id TRAC-444
-#./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D --train True --test True --seg 
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-444
+#./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-470
+#./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-471
+
+# resume training
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D_x10 --train True --test True --seg --rt --with_id TRAC-623
+./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr3D --en run_with_wholeHCP_swinunetr3D_x1 --train True --test True --seg --rt --with_id TRAC-672

@@ -11,5 +11,5 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg3D --en wholeHCP_experiment_TractSeg3D --train True --test True --seg #--rt --with_id TRAC-590
+./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg3D --en CamCan_experiment_TractSeg3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg3D_x14/best_weights_ep15.npz #--seg #--rt --with_id TRAC-469
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

@@ -1,9 +1,9 @@
 #!/bin/bash -l 
 #PBS -A NeuroX
-#PBS -N tractseg
+#PBS -N swinunetr
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
-#PBS -l walltime=14:00:00
+#PBS -l walltime=24:00:00
 #PBS -q preemptable
 #PBS -j oe
 
@@ -11,5 +11,5 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg
+./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

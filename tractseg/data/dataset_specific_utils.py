@@ -346,14 +346,7 @@ def get_correct_input_dim(Config):
 
 def get_dwi_affine(dataset, resolution):
 
-    if dataset == "HCP" and resolution == "1.25mm":
-        # shape (145,174,145)
-        return np.array([[-1.25, 0.,  0.,   90.],
-                         [0., 1.25,   0.,  -126.],
-                         [0.,    0., 1.25, -72.],
-                         [0.,    0.,  0.,   1.]])
-
-    elif dataset == "HCP_32g" and resolution == "1.25mm":
+    if ("HCP" in dataset or "CamCan" in dataset) and resolution == "1.25mm":
         # shape (145,174,145)
         return np.array([[-1.25, 0.,  0.,   90.],
                          [0., 1.25,   0.,  -126.],
@@ -381,9 +374,9 @@ def get_dwi_affine(dataset, resolution):
 def get_cv_fold(Config):
     fold=Config.CV_FOLD
     dataset=Config.DATASET
-    if dataset == "HCP_all" or dataset == "HCP_vis": # all_subjects_HCP_all (1061 subjects are used) 
+    if dataset == "HCP_all" or dataset == "HCP_vis" or dataset == "CamCan": # all_subjects_HCP_all (1061 subjects are used) 
         # 1061 subjects are loaded in the fixed order.
-        subjects = [subject for subject in get_all_subjects(dataset) if os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.FEATURES_FILENAME+'.nii.gz')) and os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.LABELS_FILENAME+'.nii.gz')) ]
+        subjects = [subject for subject in get_all_subjects(Config) if os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.FEATURES_FILENAME+'.nii.gz')) and os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.LABELS_FILENAME+'.nii.gz')) ]
         print('len(subjects)',len(subjects))
         # fifteen percent of validate subjects and fiften percent of test subjects
         cut_point_1 = int(len(subjects) * 0.7)
@@ -398,7 +391,7 @@ def get_cv_fold(Config):
             rng.shuffle(TRAIN_VALIDATE_SUBJECTS)
             return TRAIN_VALIDATE_SUBJECTS[:cut_point_1],TRAIN_VALIDATE_SUBJECTS[cut_point_1:], TEST_SUBJECTS
     elif dataset == "HCP_90g": # all_subjects_FINAL_with_complete_90g (1049 subjects are used)
-        subjects = get_all_subjects(dataset)
+        subjects = get_all_subjects(Config)
         cut_point = int(len(subjects) * 0.7)
         return subjects[:cut_point], subjects[cut_point:], ["599671", "599469"]
     # elif dataset == "biobank_20k" or dataset == "biobank_10":
@@ -426,7 +419,7 @@ def get_cv_fold(Config):
         elif fold == 4:
             train, validate, test = [0, 1, 2], [3], [4]
 
-        subjects = get_all_subjects(dataset) # only 105 subjects are used (all_subjects_FINAL)
+        subjects = get_all_subjects(Config) # only 105 subjects are used (all_subjects_FINAL)
         if dataset.startswith("HCP"):
             subjects = list(utils.chunks(subjects, 21))   #5 folds a 21 subjects
             # 5 fold CV ok (score only 1%-point worse than 10 folds (80 vs 60 train subjects) (10 Fold CV impractical!)
@@ -438,78 +431,6 @@ def get_cv_fold(Config):
 
         subjects = np.array(subjects)
         return list(subjects[train].flatten()), list(subjects[validate].flatten()), list(subjects[test].flatten())
-
-
-def scale_input_to_unet_shape(img4d, dataset, resolution="1.25mm"):
-    """
-    Scale input image to right isotropic resolution and pad/cut image to make it square to fit UNet input shape.
-    This is not generic but optimised for some specific datasets.
-
-    Args:
-        img4d: (x, y, z, classes)
-        dataset: HCP|HCP_32g|TRACED|Schizo
-        resolution: 1.25mm|2mm|2.5mm
-
-    Returns:
-        img with dim 1mm: (144,144,144,none) or 2mm: (80,80,80,none) or 2.5mm: (80,80,80,none)
-        (note: 2.5mm padded with more zeros to reach 80,80,80)
-    """
-    if resolution == "1.25mm":
-        if dataset == "HCP":  # (145,174,145)
-            # no resize needed
-            return img4d[1:, 15:159, 1:]  # (144,144,144)
-        elif dataset == "HCP_32g":  # (73,87,73)
-            img4d = img_utils.resize_first_three_dims(img4d, zoom=2)  # (146,174,146,none)
-            img4d = img4d[:-1,:,:-1]  # remove one voxel that came from upsampling   # (145,174,145)
-            return img4d[1:, 15:159, 1:]  # (144,144,144)
-        elif dataset == "TRACED":  # (78,93,75)
-            raise ValueError("resolution '1.25mm' not supported for dataset 'TRACED'")
-        elif dataset == "Schizo":  # (91,109,91)
-            img4d = img_utils.resize_first_three_dims(img4d, zoom=1.60)  # (146,174,146)
-            return img4d[1:145, 15:159, 1:145]                                # (144,144,144)
-
-    elif resolution == "2mm":
-        if dataset == "HCP":  # (145,174,145)
-            img4d = img_utils.resize_first_three_dims(img4d, zoom=0.62)  # (90,108,90)
-            return img4d[5:85, 14:94, 5:85, :]  # (80,80,80)
-        elif dataset == "HCP_32g":  # (145,174,145)
-            img4d = img_utils.resize_first_three_dims(img4d, zoom=0.62)  # (90,108,90)
-            return img4d[5:85, 14:94, 5:85, :]  # (80,80,80)
-        elif dataset == "HCP_2mm":  # (90,108,90)
-            # no resize needed
-            return img4d[5:85, 14:94, 5:85, :]  # (80,80,80)
-        elif dataset == "TRACED":  # (78,93,75)
-            raise ValueError("resolution '2mm' not supported for dataset 'TRACED'")
-        elif dataset == "Schizo":  # (91,109,91)
-            return img4d[:, 9:100, :]                                # (91,91,91)
-
-    elif resolution == "2.5mm":
-        if dataset == "HCP":  # (145,174,145)
-            img4d = img_utils.resize_first_three_dims(img4d, zoom=0.5)  # (73,87,73,none)
-            bg = np.zeros((80, 80, 80, img4d.shape[3])).astype(img4d.dtype)
-            # make bg have same value as bg from original img  (this adds last dim of img4d to last dim of bg)
-            bg = bg + img4d[0,0,0,:]
-            bg[4:77, :, 4:77] = img4d[:, 4:84, :, :]
-            return bg  # (80,80,80)
-        elif dataset == "HCP_2.5mm":  # (73,87,73,none)
-            # no resize needed
-            bg = np.zeros((80, 80, 80, img4d.shape[3])).astype(img4d.dtype)
-            # make bg have same value as bg from original img  (this adds last dim of img4d to last dim of bg)
-            bg = bg + img4d[0,0,0,:]
-            bg[4:77, :, 4:77] = img4d[:, 4:84, :, :]
-            return bg  # (80,80,80)
-        elif dataset == "HCP_32g":  # (73,87,73,none)
-            bg = np.zeros((80, 80, 80, img4d.shape[3])).astype(img4d.dtype)
-            # make bg have same value as bg from original img  (this adds last dim of img4d to last dim of bg)
-            bg = bg + img4d[0, 0, 0, :]
-            bg[4:77, :, 4:77] = img4d[:, 4:84, :, :]
-            return bg  # (80,80,80)
-        elif dataset == "TRACED":  # (78,93,75)
-            # no resize needed
-            bg = np.zeros((80, 80, 80, img4d.shape[3])).astype(img4d.dtype)
-            bg = bg + img4d[0, 0, 0, :]  # make bg have same value as bg from original img
-            bg[1:79, :, 3:78, :] = img4d[:, 7:87, :, :]
-            return bg  # (80,80,80)
 
 
 def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):
@@ -526,16 +447,18 @@ def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):
         (x_original, y_original, z_original, classes)
     """
     if resolution == "1.25mm":
-        if dataset == "HCP":  # (144,144,144)
+        if "HCP" in dataset:  # (144,144,144)
             # no resize needed
             return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
                                                [146, 174, 146, img4d.shape[3]],
-                                               pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
-        elif dataset == "HCP_32g":  # (144,144,144)
+                                               pad_value=0)[1:, :, 1:, :]  # (145, 174, 145, none)
+                                               #pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
+        elif "CamCan" in dataset:  # (144,144,144)
             # no resize needed
             return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
                                                [146, 174, 146, img4d.shape[3]],
-                                               pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
+                                               pad_value=0)[1:, :, 1:, :]  # (145, 174, 145, none)
+                                               #pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
         elif dataset == "TRACED":  # (78,93,75)
             raise ValueError("resolution '1.25mm' not supported for dataset 'TRACED'")
         elif dataset == "Schizo":  # (144,144,144)

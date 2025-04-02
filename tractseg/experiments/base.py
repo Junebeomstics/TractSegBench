@@ -32,12 +32,11 @@ class Config:
 
     # input data
     EXPERIMENT_TYPE = "tract_segmentation"  # tract_segmentation|endings_segmentation|dm_regression|peak_regression
-    EXP_NAME = "hcp_exp" # replaced by custom experiment name
-    EXP_MULTI_NAME = ""  # CV parent directory name; leave empty for single bundle experiment
+    #EXP_MULTI_NAME = ""  # CV parent directory name; leave empty for single bundle experiment
     DATASET_FOLDER = "HCP_preproc" # "HCP_for_training"
     LABELS_FOLDER = "bundle_masks"
-    EXP_PATH = join(HOME, EXP_MULTI_NAME, EXP_NAME)  # default path
-    MULTI_PARENT_PATH = join(EXP_PATH, EXP_MULTI_NAME) #join(C.EXP_PATH, EXP_MULTI_NAME)
+    DEFAULT_EXP_PATH = join(HOME, "hcp_exp")  # default path
+    #MULTI_PARENT_PATH = join(EXP_PATH, EXP_MULTI_NAME) #join(C.EXP_PATH, EXP_MULTI_NAME)
     CLASSES = "All"
     NR_OF_GRADIENTS = 9
     NR_OF_CLASSES = len(dataset_specific_utils.get_bundle_names(CLASSES)[1:])

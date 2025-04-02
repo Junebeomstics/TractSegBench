@@ -19,16 +19,26 @@ def save_checkpoint(path, **kwargs):
 
 def load_checkpoint(path, **kwargs):
     checkpoint = torch.load(path, map_location=lambda storage, loc: storage)
+    updates = 0
     for key, value in list(kwargs.items()):
-        if key in checkpoint:
-            if key in ['unet', 'optimizer','scheduler']:
-                print('using pre-trained weights for {}'.format(key))
-                value.load_state_dict(checkpoint[key])
-                
-            elif key == 'epoch':
-                print('using pre-trained values for {}'.format(key))
-                value = checkpoint[key] + 1
+        # for resume_training or loading pre-trained weights
+        if key == 'unet':
+            print('using pre-trained weights for unet')
+            value.load_state_dict(checkpoint['unet'] if 'unet' in checkpoint else checkpoint)
+            # COMPILE argument can add 
+            updates += 1
+        # for resume_training
+        elif key in ['optimizer','scheduler']:
+            print('using pre-trained states for {}'.format(key))
+            value.load_state_dict(checkpoint[key])
+            updates += 1
+        elif key == 'epoch':
+            print('using previous {}'.format(key))
+            value = checkpoint[key] + 1
+            updates += 1
         kwargs[key] = value
+    if updates == 0:
+        print('no updates made from pretrained checkpoints')
     return kwargs
 
 def load_checkpoint_selectively(path, **kwargs):

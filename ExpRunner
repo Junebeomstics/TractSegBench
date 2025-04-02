@@ -93,6 +93,8 @@ def main():
 
     if args.en:
         Config.EXP_NAME = args.en # update Config.EXP_NAME
+    else:
+        Config.EXP_NAME = "default"
     Config.TRAIN = bool(args.train) # True
     Config.TEST = bool(args.test) # True
     if args.seg:
@@ -119,21 +121,28 @@ def main():
         Config.DATA_PATH = args.data_path
     Config.VERBOSE = args.verbose # by default: verbose = True
 
-    Config.MULTI_PARENT_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME) # by default: C.EXP_PATH = "hcp_exp", Config.EXP_MULTI_NAME=""
-    Config.EXP_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME, Config.EXP_NAME) #Config.EXP_NAME="HCP_TEST" -> "hcp_exp/HCP_TEST"
-    Config.TRAIN_SUBJECTS, Config.VALIDATE_SUBJECTS, Config.TEST_SUBJECTS = dataset_specific_utils.get_cv_fold(Config) # Config.DATASET = "HCP"
+    # Set up EXP_PATH 
+    Config.EXP_PATH = exp_utils.create_experiment_folder(Config)
 
     if Config.RESUME_TRAINING:
-        # return path to best weights based on Config.EXP_PATH regardless of the Config.WEIGHTS_PATH
-        # You should write the valid Config.EXP_PATH
-        print(Config.EXP_PATH)
-        Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, Config.RESUME_TRAINING) # Config.LOAD_WEIGHTS = False
+        # Load weights from the last epoch
+        Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, True) # Config.LOAD_WEIGHTS = False  
     elif Config.LOAD_WEIGHTS:
-        if Config.WEIGHTS_PATH == "":
-            # return path to best weights if you have not specified Config.WEIGHTS_PATH
-            Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, Config.LOAD_WEIGHTS)
-        else: 
-            pass # If you have specified Config.WEIGHTS_PATH, it will be loaded at base_model.py
+        if Config.WEIGHTS_PATH:
+            # Load weights from the specified path
+            pass
+        elif Config.ONLY_VAL or not Config.TRAIN: 
+            # If you want to load the best weights for validation or testing
+            Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, True)
+        else:
+            raise ValueError("If you want to load weights, please set the path to the weights in Config.WEIGHTS_PATH")
+    else: 
+        Config.WEIGHTS_PATH = None 
+
+    #Config.MULTI_PARENT_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME) # by default: C.EXP_PATH = "hcp_exp", Config.EXP_MULTI_NAME=""
+    #Config.EXP_PATH = join(Config.DEFAULT_EXP_PATH, Config.EXP_NAME) #Config.EXP_NAME="HCP_TEST" -> "hcp_exp/HCP_TEST"
+    Config.TRAIN_SUBJECTS, Config.VALIDATE_SUBJECTS, Config.TEST_SUBJECTS = dataset_specific_utils.get_cv_fold(Config) # Config.DATASET = "HCP"
+
 
     #Autoset input dimensions based on settings
     # Config.INPUT_DIM = dataset_specific_utils.get_correct_input_dim(Config) # Config.DIM and Config.RESOLUTION are used.
@@ -151,10 +160,6 @@ def main():
     #     Config.NR_OF_CLASSES = len(dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:])
     #     # Config.CLASSES = "All" -> Config.NR_OF_CLASSES = 72, the first component of bundle_names is "Background"
         
-
-    if Config.TRAIN and not Config.ONLY_VAL and not Config.RESUME_TRAINING:
-        Config.EXP_PATH = exp_utils.create_experiment_folder(Config.EXP_NAME, Config.MULTI_PARENT_PATH, Config.TRAIN)
-
     if Config.DIM != "2D":
         Config.EPOCH_MULTIPLIER = 3
 
@@ -196,22 +201,17 @@ def main():
         trainer.train_model(Config, model, run, scheduler=scheduler)
         # run["train/loss"].append(0.9 ** epoch) # <- why??, which means epoch here?
 
-    # After Training
-    if Config.TRAIN and not Config.ONLY_VAL:
         # Have to load other weights, because after training it has the weights of the last epoch
         print("Loading best epoch: {}".format(Config.BEST_EPOCH))
-        #Config.WEIGHTS_PATH = Config.EXP_PATH + "/best_weights_ep" + str(Config.BEST_EPOCH) + ".npz"
-        Config.WEIGHTS_PATH = sorted(glob.glob(join(Config.EXP_PATH,'best_weights_ep*')))[-1]
-        Config.LOAD_WEIGHTS = True
+        Config.WEIGHTS_PATH = exp_utils.get_best_weights_path(Config.EXP_PATH, True) 
         model.load_model(Config.WEIGHTS_PATH)
-        model_test = model
-    else: # not Config.TRAIN or Config.ONLY_VAL = True
-        # Weight_path already set to best model (when reading program parameters) -> will be loaded automatically
-        model_test = model
+
+    if Config.TEST:
+        trainer.test_whole_subject(Config, model, Config.TEST_SUBJECTS, "test")
 
     if Config.SEGMENT:
         exp_utils.make_dir(join(Config.EXP_PATH, "segmentations"))
-        all_subjects = Config.VALIDATE_SUBJECTS
+        all_subjects = Config.TEST_SUBJECTS
         for subject in all_subjects:
             print("Get_segmentation subject {}".format(subject))
             img_seg, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject)
@@ -221,20 +221,13 @@ def main():
                                   dataset_specific_utils.get_dwi_affine(Config.DATASET, Config.RESOLUTION))
             nib.save(img, join(Config.EXP_PATH, "segmentations", subject + "_segmentation.nii.gz"))
 
-    if Config.TEST:
-        trainer.test_whole_subject(Config, model_test, Config.TEST_SUBJECTS, "test")
-
     if Config.GET_PROBS:
         exp_utils.make_dir(join(Config.EXP_PATH, "probmaps"))
-        all_subjects = Config.VALIDATE_SUBJECTS
+        all_subjects = Config.TEST_SUBJECTS
         for subject in all_subjects:
             print("Get_probs subject {}".format(subject))
             data_loader = DataLoaderInference(Config, subject=subject)
 
-            #if Config.EXPERIMENT_TYPE == "peak_regression":
-            #    img_probs, img_y = trainer.predict_img(Config, model_test, data_loader, probs=True)
-            #    img_probs = peak_utils.remove_small_peaks(img_probs, len_thr=0.4)
-            #else:
             img_probs, img_y = direction_merger.get_seg_single_img_3_directions(Config, model, subject=subject)
             img_probs = direction_merger.mean_fusion(Config.THRESHOLD, img_probs, probs=True)
 

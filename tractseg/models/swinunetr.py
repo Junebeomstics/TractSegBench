@@ -80,6 +80,7 @@ class SwinUNETR(nn.Module):
         use_checkpoint: bool = False,
         spatial_dims: int = 3,
         downsample="merging",
+        deep_supervision=True,  # Enable deep supervision by default
         use_v2=False,
     ) -> None:
         """
@@ -122,6 +123,7 @@ class SwinUNETR(nn.Module):
 
         img_size = ensure_tuple_rep(img_size, spatial_dims)
         self.patch_size = patch_size
+        self.deep_supervision = deep_supervision
         patch_sizes = ensure_tuple_rep(self.patch_size, spatial_dims) # window size = 
         window_size = ensure_tuple_rep(window_size, spatial_dims) # window size = 7
 
@@ -264,6 +266,25 @@ class SwinUNETR(nn.Module):
 
         self.out = UnetOutBlock(spatial_dims=spatial_dims, in_channels=feature_size, out_channels=out_channels)
 
+        # Add deep supervision outputs (matching TractSeg approach)
+        if self.deep_supervision:
+            # Choose Conv class based on spatial dimensions
+            conv_class = nn.Conv3d if spatial_dims == 3 else nn.Conv2d
+            
+            # Deep supervision at decoder4 output level (after dec3)
+            self.ds_output_2 = conv_class(
+                8 * feature_size, out_channels, kernel_size=1, stride=1, padding=0, bias=True
+            )
+            self.ds_output_2_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
+            
+            # Deep supervision at decoder3 output level (after dec2)
+            # Input is the concatenation of previous upsampled output with current level features
+            self.ds_output_3 = conv_class(
+                4 * feature_size, out_channels, kernel_size=1, stride=1, padding=0, bias=True
+            )
+            self.ds_output_3_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
+
+
     def load_from(self, weights):
         with torch.no_grad():
             def safe_copy(param, state_dict_key):
@@ -364,17 +385,46 @@ class SwinUNETR(nn.Module):
         # if not torch.jit.is_scripting():
         #     self._check_input_size(x_in.shape[2:])
         hidden_states_out = self.swinViT(x_in, self.normalize)
+        # Encoder path
         enc0 = self.encoder1(x_in)
         enc1 = self.encoder2(hidden_states_out[0])
         enc2 = self.encoder3(hidden_states_out[1])
         enc3 = self.encoder4(hidden_states_out[2])
+        # Bottleneck
         dec4 = self.encoder10(hidden_states_out[4])
-        dec3 = self.decoder5(dec4, hidden_states_out[3])
-        dec2 = self.decoder4(dec3, enc3)
-        dec1 = self.decoder3(dec2, enc2)
-        dec0 = self.decoder2(dec1, enc1)
-        out = self.decoder1(dec0, enc0)
+        
+        # Decoder path with deep supervision
+        # Level 5 (bottom level)
+        dec3 = self.decoder5(dec4, hidden_states_out[3]) # upsample dec4
+
+        # Level 4
+        dec2 = self.decoder4(dec3, enc3) # upsample dec3
+
+        # First deep supervision at level 4
+        # TractSeg uses the concat of dec3 and enc3 for supervision, 
+        # we'll use dec3 which is before the concat
+        if self.deep_supervision:
+            ds_output_2 = self.ds_output_2(dec3)
+            ds_output_2_up = self.ds_output_2_up(ds_output_2)
+
+        # Level 3
+        dec1 = self.decoder3(dec2, enc2) # upsample dec2
+
+        # Second deep supervision at level 3
+        # TractSeg adds the previous upsampled output to the current output
+        if self.deep_supervision and self.training:
+            ds_output_3 = self.ds_output_3(dec2)  # Use dec2 before concat
+            ds_output_3 = ds_output_2_up + ds_output_3  # Add previous upsampled output
+            ds_output_3_up = self.ds_output_3_up(ds_output_3)
+
+        dec0 = self.decoder2(dec1, enc1) # upsample dec1
+        out = self.decoder1(dec0, enc0) # upsample dec0
         logits = self.out(out)
+
+        if self.deep_supervision and self.training:
+            # Add final deep supervision output to main output (TractSeg approach)
+            final = ds_output_3_up + logits
+            return final
 
         return logits
 
