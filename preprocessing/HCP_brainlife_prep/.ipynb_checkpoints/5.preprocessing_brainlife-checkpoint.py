@@ -21,7 +21,7 @@ from tractseg.libs import exp_utils
 
 
 #todo: adapt
-dataset = "HCP_final" # 105 subjects
+#dataset = "HCP_final" # 105 subjects
 DATASET_FOLDER = "HCP_for_training_brainlife"  # source folder
 DATASET_FOLDER_PREPROC = "HCP_preproc_brainlife"  # target folder
 DATA_PATH = '/global/cfs/cdirs/m4673/junbeom/TractSegVis'

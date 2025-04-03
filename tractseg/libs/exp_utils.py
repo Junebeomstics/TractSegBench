@@ -65,7 +65,7 @@ def create_experiment_folder(Config):
                 # update experiment name
                 dir = join(Config.DEFAULT_EXP_PATH, experiment_name)
             else:
-                os.makedirs(dir)
+                os.makedirs(dir, exist_ok=True)
                 break
         return dir
 

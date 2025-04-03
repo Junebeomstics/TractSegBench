@@ -25,8 +25,8 @@ class Config(BaseConfig):
     vit_name = 'vit_h'
     COMPILE = True
     DIM = "3D"  # 2D | 3D
-    INPUT_DIM = (128,144,128) # Replace img_size
-    SAM_SLICE_DIRECTION = "y"
+    INPUT_DIM = (144,144,144) # Replace img_size
+    SAM_SLICE_DIRECTION = "x"
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  

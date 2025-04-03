@@ -11,5 +11,7 @@
 #SBATCH --mail-user=kjb961013@snu.ac.kr
 module load pytorch/2.1.0
 
+cd /global/cfs/cdirs/m4673/junbeom/TractSegVis/TractSeg/
+
 ./ExpRunner --config Zenedo_experiment_swinunetr --en run_with_default_settings_swinunetr --train False --test True --only_val --seg --lw
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

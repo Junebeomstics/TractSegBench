@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A m4673
+#SBATCH -A m4727
 #SBATCH -C cpu
 #SBATCH -q regular
 #SBATCH -t 12:00:00
@@ -11,5 +11,5 @@
 #SBATCH --mail-user=kjb961013@snu.ac.kr
 module load pytorch/1.13.1
 
-python convert_tractmasks_to_bundle_mask.py
+python 2.convert_tractmasks_to_bundle_mask_corrected.py
 
