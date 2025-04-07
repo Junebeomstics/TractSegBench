@@ -45,6 +45,72 @@ __all__ = [
     "SwinTransformer",
 ]
 
+# class UnetrUpBlock(nn.Module):
+#     """
+#     An upsampling module that can be used for UNETR: "Hatamizadeh et al.,
+#     UNETR: Transformers for 3D Medical Image Segmentation <https://arxiv.org/abs/2103.10504>"
+#     """
+
+#     def __init__(
+#         self,
+#         spatial_dims: int,
+#         in_channels: int,
+#         out_channels: int,
+#         kernel_size: Sequence[int] | int,
+#         upsample_kernel_size: Sequence[int] | int,
+#         norm_name: tuple | str,
+#         res_block: bool = False,
+#     ) -> None:
+#         """
+#         Args:
+#             spatial_dims: number of spatial dimensions.
+#             in_channels: number of input channels.
+#             out_channels: number of output channels.
+#             kernel_size: convolution kernel size.
+#             upsample_kernel_size: convolution kernel size for transposed convolution layers.
+#             norm_name: feature normalization type and arguments.
+#             res_block: bool argument to determine if residual block is used.
+
+#         """
+
+#         super().__init__()
+#         upsample_stride = upsample_kernel_size
+#         self.transp_conv = get_conv_layer(
+#             spatial_dims,
+#             in_channels,
+#             out_channels,
+#             kernel_size=upsample_kernel_size,
+#             stride=upsample_stride,
+#             conv_only=True,
+#             is_transposed=True,
+#         )
+
+#         if res_block:
+#             self.conv_block = UnetResBlock(
+#                 spatial_dims,
+#                 out_channels + out_channels,
+#                 out_channels,
+#                 kernel_size=kernel_size,
+#                 stride=1,
+#                 norm_name=norm_name,
+#             )
+#         else:
+#             self.conv_block = UnetBasicBlock(  # type: ignore
+#                 spatial_dims,
+#                 out_channels + out_channels,
+#                 out_channels,
+#                 kernel_size=kernel_size,
+#                 stride=1,
+#                 norm_name=norm_name,
+#             )
+
+#     def forward(self, inp, skip):
+#         # number of channels for skip should equals to out_channels
+#         out = self.transp_conv(inp)
+#         out = torch.cat((out, skip), dim=1)
+#         out = self.conv_block(out)
+#         return out
+
 
 class SwinUNETR(nn.Module):
     """
@@ -80,8 +146,8 @@ class SwinUNETR(nn.Module):
         use_checkpoint: bool = False,
         spatial_dims: int = 3,
         downsample="merging",
-        deep_supervision=True,  # Enable deep supervision by default
         use_v2=False,
+        deep_supervision=False,  # Enable deep supervision by default
     ) -> None:
         """
         Args:
@@ -124,6 +190,7 @@ class SwinUNETR(nn.Module):
         img_size = ensure_tuple_rep(img_size, spatial_dims)
         self.patch_size = patch_size
         self.deep_supervision = deep_supervision
+        self.upsample_mode="trilinear" if spatial_dims == 3 else "bilinear"
         patch_sizes = ensure_tuple_rep(self.patch_size, spatial_dims) # window size = 
         window_size = ensure_tuple_rep(window_size, spatial_dims) # window size = 7
 
@@ -215,6 +282,8 @@ class SwinUNETR(nn.Module):
             res_block=True,
         )
 
+        # five times of upsample
+        # Each UnetrUpBlock consists of ConvTranspose + concat + Conv
         self.decoder5 = UnetrUpBlock(
             spatial_dims=spatial_dims,
             in_channels=16 * feature_size,
@@ -263,27 +332,22 @@ class SwinUNETR(nn.Module):
             norm_name=norm_name,
             res_block=True,
         )
-
+        
         self.out = UnetOutBlock(spatial_dims=spatial_dims, in_channels=feature_size, out_channels=out_channels)
 
         # Add deep supervision outputs (matching TractSeg approach)
         if self.deep_supervision:
             # Choose Conv class based on spatial dimensions
             conv_class = nn.Conv3d if spatial_dims == 3 else nn.Conv2d
-            
-            # Deep supervision at decoder4 output level (after dec3)
-            self.ds_output_2 = conv_class(
-                8 * feature_size, out_channels, kernel_size=1, stride=1, padding=0, bias=True
-            )
-            self.ds_output_2_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
-            
-            # Deep supervision at decoder3 output level (after dec2)
-            # Input is the concatenation of previous upsampled output with current level features
-            self.ds_output_3 = conv_class(
-                4 * feature_size, out_channels, kernel_size=1, stride=1, padding=0, bias=True
-            )
-            self.ds_output_3_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
 
+            # Deep supervision at decoder3 output level (after dec3)
+            # Input is the concatenation of previous upsampled output with current level features
+            self.ds_output_1 = conv_class(feature_size * 2, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+            self.ds_output_1_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
+            
+            # Deep supervision at decoder2 output level (after dec2)
+            self.ds_output_0 = conv_class(feature_size, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+            self.ds_output_0_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
 
     def load_from(self, weights):
         with torch.no_grad():
@@ -391,39 +455,42 @@ class SwinUNETR(nn.Module):
         enc2 = self.encoder3(hidden_states_out[1])
         enc3 = self.encoder4(hidden_states_out[2])
         # Bottleneck
-        dec4 = self.encoder10(hidden_states_out[4])
+        dec4 = self.encoder10(hidden_states_out[4]) # out_channels=16 * feature_size # encode_2까지
         
-        # Decoder path with deep supervision
+        
         # Level 5 (bottom level)
-        dec3 = self.decoder5(dec4, hidden_states_out[3]) # upsample dec4
+        dec3 = self.decoder5(dec4, hidden_states_out[3]) # upsample dec4  #out_channels=8 * feature_size 
 
         # Level 4
-        dec2 = self.decoder4(dec3, enc3) # upsample dec3
+        dec2 = self.decoder4(dec3, enc3) # upsample dec3 # out_channels=4 * feature_size # deconv1 + concat1 + expand_1_1+1_2 (decoder 5에는 1_2는 없음)
+        # output_2가 expand_2_1과 동일한 input을 받음
 
+        # Level 3
+        dec1 = self.decoder3(dec2, enc2) # upsample dec2 # out_channels=2 * feature_size  # deconv2 + concat2 + expand_2_1+2_2 (decoder 5에는 2_2는 없음) 
+
+        # Level 2
+        dec0 = self.decoder2(dec1, enc1) # upsample dec1 # out_channels= feature_size # deconv3 + concat3 + expand_3_1+3_2 (decoder 5에는 3_2는 없음)
+
+        # Level 1
+        out = self.decoder1(dec0, enc0) # upsample dec0 # out_channels= feature_size # deconv4 + expand_4_1+4_2 (decoder 5에는 3_2는 없음)
+        logits = self.out(out) # out_channels= out_channels # conv_5 (conv_5는 upsample이 없는 반면, decoder1은 마지막 upsample이 한번 더 있음)
+
+        # Decoder path with deep supervision
         # First deep supervision at level 4
         # TractSeg uses the concat of dec3 and enc3 for supervision, 
         # we'll use dec3 which is before the concat
         if self.deep_supervision:
-            ds_output_2 = self.ds_output_2(dec3)
-            ds_output_2_up = self.ds_output_2_up(ds_output_2)
+            ds_output_1 = self.ds_output_1(dec1)
+            ds_output_1_up = self.ds_output_1_up(ds_output_1)
+            
+            # Second deep supervision at level 3
+            # TractSeg adds the previous upsampled output to the current output
+            ds_output_0 = self.ds_output_0(dec0)  # Use dec2 before concat
+            ds_output_0 = ds_output_1_up + ds_output_0  # Add previous upsampled output
+            ds_output_0_up = self.ds_output_0_up(ds_output_0)
 
-        # Level 3
-        dec1 = self.decoder3(dec2, enc2) # upsample dec2
-
-        # Second deep supervision at level 3
-        # TractSeg adds the previous upsampled output to the current output
-        if self.deep_supervision and self.training:
-            ds_output_3 = self.ds_output_3(dec2)  # Use dec2 before concat
-            ds_output_3 = ds_output_2_up + ds_output_3  # Add previous upsampled output
-            ds_output_3_up = self.ds_output_3_up(ds_output_3)
-
-        dec0 = self.decoder2(dec1, enc1) # upsample dec1
-        out = self.decoder1(dec0, enc0) # upsample dec0
-        logits = self.out(out)
-
-        if self.deep_supervision and self.training:
             # Add final deep supervision output to main output (TractSeg approach)
-            final = ds_output_3_up + logits
+            final = ds_output_0_up + logits
             return final
 
         return logits

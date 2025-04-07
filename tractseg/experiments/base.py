@@ -160,5 +160,7 @@ class Config:
     NUM_PROCESSES = 16 # 16 for 2D, 12 for 3D
     GRADIENT_CLIP = None # 1.0
 
+    DEEP_SUPERVISION = True
+
 
 
