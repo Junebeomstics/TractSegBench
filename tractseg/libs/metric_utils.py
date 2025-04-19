@@ -152,6 +152,69 @@ def calculate_metrics(metrics, y, class_probs, loss, f1=None, f1_per_bundle=None
 
     return metrics
 
+def calculate_metrics_for_ddp(Config, model, predictions, labels, device):
+    """
+    Calculate metrics after collecting all predictions and labels from all processes.
+    
+    Args:
+        Config: Configuration object
+        model: The model
+        predictions: All predictions across all processes (tensor)
+        labels: All ground truth labels across all processes (tensor)
+        device: The device to use for calculations
+        
+    Returns:
+        metrics: Dictionary of metrics
+    """
+    # Ensure predictions and labels are on the correct device
+    predictions = predictions.to(device)
+    labels = labels.to(device)
+    
+    # Create containers for gathering from all processes
+    all_predictions = [torch.zeros_like(predictions) for _ in range(torch.distributed.get_world_size())]
+    all_labels = [torch.zeros_like(labels) for _ in range(torch.distributed.get_world_size())]
+    
+    # Gather predictions and labels from all processes
+    torch.distributed.all_gather(all_predictions, predictions)
+    torch.distributed.all_gather(all_labels, labels)
+    
+    # Concatenate all predictions and labels
+    all_predictions = torch.cat(all_predictions, dim=0)
+    all_labels = torch.cat(all_labels, dim=0)
+    
+    # Move to CPU for sklearn metrics
+    all_predictions_np = all_predictions.cpu().numpy()
+    all_labels_np = all_labels.cpu().numpy()
+    
+    # Calculate F1 score
+    pred_class = (all_predictions_np >= Config.THRESHOLD).astype(np.int16)
+    labels_binary = (all_labels_np >= Config.THRESHOLD).astype(np.int16)
+    
+    # Use the existing F1 score function
+    f1_macro = my_f1_score_macro(labels_binary, pred_class)
+    
+    metr_batch = {"loss": 0.0, "f1_macro": f1_macro}
+    
+    return metr_batch
+
+def _update_metrics(calc_f1, experiment_type, metric_types, metrics, metr_batch, type):
+    if calc_f1:
+        metr_batch["f1_macro"] = np.mean(metr_batch["f1_macro"])
+
+        metrics = add_to_metrics(metrics, metr_batch, type, metric_types)
+    else:
+        metrics = calculate_metrics_onlyLoss(metrics, metr_batch["loss"], type=type)
+    return metrics
+
+def _update_metrics_ddp(Config, metrics, metr_batch, type):
+    """
+    Update metrics for DDP training
+    """
+    for key in Config.METRIC_TYPES:
+        if key in metr_batch:
+            metrics[key + "_" + type][-1] = metr_batch[key]
+    
+    return metrics
 
 def add_to_metrics(metrics, metr_batch, type, metric_types):
     for key in metric_types:
