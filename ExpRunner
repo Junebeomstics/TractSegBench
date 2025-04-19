@@ -45,6 +45,14 @@ import neptune
 from neptune.utils import stringify_unsupported
 
 from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
+
+
+#DDP
+from torch.utils.data.distributed import DistributedSampler
+import torch.distributed as dist
+from torch.nn import DataParallel
+import builtins
+from tractseg.libs.distributed import init_distributed
   
 warnings.simplefilter("ignore", UserWarning)  # hide scipy warnings
 warnings.simplefilter("ignore", FutureWarning)  # hide h5py warnings
@@ -74,15 +82,43 @@ def main():
     parser.add_argument("--with_id", type=str, default=None, help="Neptune run id")
     parser.add_argument("--weights_path", type=str, default="", help="path to weights if not using path in Config")
     parser.add_argument("--data_path", type=str, default=None, help="Neptune run id")
+    parser.add_argument("--use_torch_dataloader", action="store_true", help="use new torch dataloader")
+
+
+     # DDP configs:
+    parser.add_argument('--world_size', default=-1, type=int, 
+                        help='number of nodes for distributed training')
+    parser.add_argument('--rank', default=-1, type=int, 
+                        help='node rank for distributed training')
+    parser.add_argument('--dist_backend', default='nccl', type=str, 
+                        help='distributed backend')
+    parser.add_argument('--local_rank', default=-1, type=int, 
+                        help='local rank for distributed training')
+    parser.add_argument("--init_method", type=str, default="env", help="file|env")
+
     parser.add_argument("--use_dp", action="store_true", help="whether to activate DataParallel")
     parser.add_argument("--use_ddp", action="store_true", help="whether to activate DistributedDataParallel")
+    parser.add_argument("--avoid_ds", action="store_true", help="whether to deactivate deep supervision in UNET")
     args = parser.parse_args()
 
-    run = neptune.init_run(
-        with_id=args.with_id,  # replace with your actual run id
-        project="kjb961013/TractSegVis",  # replace with your actual project path
-        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4ZWNlMzk4Ny1hOTVlLTRjMzgtOWI4ZS1hY2FkYTY4MzNhYzMifQ=="  # replace with your API token
-        )
+    # DDP initialization
+    if args.use_ddp:
+        args = init_distributed(args)
+
+        if args.rank == 0:
+            run = neptune.init_run(
+                with_id=args.with_id,  # replace with your actual run id
+                project="kjb961013/TractSegVis",  # replace with your actual project path
+                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4ZWNlMzk4Ny1hOTVlLTRjMzgtOWI4ZS1hY2FkYTY4MzNhYzMifQ=="  # replace with your API token
+                )
+        else:
+            run = None
+    else:
+        run = neptune.init_run(
+                with_id=args.with_id,  # replace with your actual run id
+                project="kjb961013/TractSegVis",  # replace with your actual project path
+                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4ZWNlMzk4Ny1hOTVlLTRjMzgtOWI4ZS1hY2FkYTY4MzNhYzMifQ=="  # replace with your API token
+                )
 
     # Config in base.py
     Config = getattr(importlib.import_module("tractseg.experiments.base"), "Config")()
@@ -119,6 +155,22 @@ def main():
         Config.USE_DP = args.use_dp
     if args.data_path:
         Config.DATA_PATH = args.data_path
+    if args.avoid_ds:
+        Config.DEEP_SUPERVISION = False
+    if args.use_torch_dataloader:
+        Config.USE_NEW_DATALOADER = args.use_torch_dataloader
+    if args.use_ddp:
+        # register DDP-related variables.
+        Config.gpu = args.gpu
+        Config.local_rank = args.local_rank
+        Config.rank = args.rank
+        Config.world_size = args.world_size
+        Config.dist_backend = args.dist_backend
+        Config.init_method = args.init_method
+        Config.distributed = True
+    else:
+        Config.distributed = False
+
     Config.VERBOSE = args.verbose # by default: verbose = True
 
     # Set up EXP_PATH 
@@ -138,6 +190,7 @@ def main():
             raise ValueError("If you want to load weights, please set the path to the weights in Config.WEIGHTS_PATH")
     else: 
         Config.WEIGHTS_PATH = None 
+    
 
     #Config.MULTI_PARENT_PATH = join(Config.EXP_PATH, Config.EXP_MULTI_NAME) # by default: C.EXP_PATH = "hcp_exp", Config.EXP_MULTI_NAME=""
     #Config.EXP_PATH = join(Config.DEFAULT_EXP_PATH, Config.EXP_NAME) #Config.EXP_NAME="HCP_TEST" -> "hcp_exp/HCP_TEST"
@@ -163,9 +216,15 @@ def main():
     if Config.DIM != "2D":
         Config.EPOCH_MULTIPLIER = 3
 
+    
     if Config.VERBOSE:
-        print("Hyperparameters:")
-        exp_utils.print_Configs(Config)
+        if Config.distributed:
+            if Config.rank == 0:
+                print("Hyperparameters:")
+                exp_utils.print_Configs(Config)
+        else:
+            print("Hyperparameters:")
+            exp_utils.print_Configs(Config)
 
     # with open(join(Config.EXP_PATH, "Hyperparameters.txt"), "w") as f:
     #     Config_dict = {attr: getattr(Config, attr) for attr in dir(Config)
@@ -176,7 +235,11 @@ def main():
     Config_dict = {attr: getattr(Config, attr) for attr in dir(Config)
                        if not callable(getattr(Config, attr)) and not attr.startswith("__")}  
     Config_dict = {attr: stringify_unsupported(value) if type(value) in ['NoneType', tuple, list] else value for attr, value in Config_dict.items()}
-    run["parameters"] = Config_dict
+    if Config.distributed:
+        if Config.rank == 0:
+            run["parameters"] = Config_dict
+    else:
+        run["parameters"] = Config_dict
     
     Config = exp_utils.get_correct_labels_type(Config)  # do after saving Hyperparameters as txt
 

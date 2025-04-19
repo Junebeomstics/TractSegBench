@@ -32,6 +32,10 @@ from tractseg.data.datasets import MRISliceDataset, transform_data
 from torch.utils.data import Dataset, DataLoader
 from batchgenerators.transforms.abstract_transforms import Compose
 
+from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import RandomSampler
+
+
 def _get_weights_for_this_epoch(Config, epoch_nr):
     if Config.LOSS_WEIGHT is None:
         weight_factor = None
@@ -46,15 +50,6 @@ def _get_weights_for_this_epoch(Config, epoch_nr):
             weight_factor = 1.
         exp_utils.print_and_save(Config.EXP_PATH, "Current weight_factor: {}".format(weight_factor))
     return weight_factor
-
-def _update_metrics(calc_f1, experiment_type, metric_types, metrics, metr_batch, type):
-    if calc_f1:
-        metr_batch["f1_macro"] = np.mean(metr_batch["f1_macro"])
-
-        metrics = metric_utils.add_to_metrics(metrics, metr_batch, type, metric_types)
-    else:
-        metrics = metric_utils.calculate_metrics_onlyLoss(metrics, metr_batch["loss"], type=type)
-    return metrics
 
 def train_model(Config, model, run, scheduler=None):
     epoch_times = []
@@ -79,10 +74,19 @@ def train_model(Config, model, run, scheduler=None):
         train_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TRAIN_SUBJECTS"), transform=tfs_train)
         val_dataset = MRISliceDataset(Config, subjects=getattr(Config, "VALIDATE_SUBJECTS"), transform=tfs_val)
         test_dataset = MRISliceDataset(Config, subjects=getattr(Config, "TEST_SUBJECTS"), transform=tfs_val)
+
+        if Config.distributed:
+            train_sampler = DistributedSampler(train_dataset, shuffle=True)
+            val_sampler = DistributedSampler(val_dataset, shuffle=False)
+            test_sampler = DistributedSampler(test_dataset, shuffle=False)
+        else:
+            train_sampler = RandomSampler(train_dataset)
+            val_sampler = None
+            test_sampler = None
         
-        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, shuffle=True, num_workers=Config.NUM_PROCESSES, pin_memory=True)
-        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=Config.NUM_PROCESSES, pin_memory=True)
-        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=False, num_workers=Config.NUM_PROCESSES, pin_memory=True)
+        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=train_sampler)
+        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(val_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=val_sampler)
+        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(test_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=test_sampler)
     else:
         if Config.DIM == "2D":
             data_loader = DataLoaderTraining2D(Config) 
@@ -105,6 +109,10 @@ def train_model(Config, model, run, scheduler=None):
         timings = defaultdict(lambda: 0) 
         batch_nr = defaultdict(lambda: 0) # 매 epoch마다 초기화
         weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
+
+        if Config.distributed:
+            all_predictions = []
+            all_labels = []
         
         for type in types:
             print(f"Start looping {type} batches in epoch {epoch_nr}...")
@@ -113,10 +121,19 @@ def train_model(Config, model, run, scheduler=None):
             if Config.USE_NEW_DATALOADER:
                 if type == "train":
                     loader = batch_gen_train
+                    if Config.distributed:
+                        # Set epoch for distributed sampler
+                        loader.sampler.set_epoch(epoch_nr)
                 elif type == "validate":
                     loader = batch_gen_val
+                    if Config.distributed:
+                        # Also set epoch for validation sampler to ensure proper shard distribution
+                        loader.sampler.set_epoch(epoch_nr)
                 elif type == "test":
-                    loader = batch_gen_test   
+                    loader = batch_gen_test  
+                    if Config.distributed:
+                        # Set epoch for test sampler too
+                        loader.sampler.set_epoch(epoch_nr) 
 
                 for batch in loader:
                     start_time_data_preparation = time.time()
@@ -147,7 +164,12 @@ def train_model(Config, model, run, scheduler=None):
                     probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
                     timings["network_time"] += time.time() - start_time_network
                     start_time_metrics = time.time()
-                    metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
+                    # if Config.distributed:
+                    #     # Store the predictions and labels for later metric calculation
+                    #     predictions_list.append(probs.detach())  
+                    #     labels_list.append(y.detach())
+                    # else:
+                    metrics = metric_utils._update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
                                             metrics, metr_batch, type)
                     timings["metrics_time"] += time.time() - start_time_metrics
 
@@ -210,7 +232,7 @@ def train_model(Config, model, run, scheduler=None):
                     probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
                     timings["network_time"] += time.time() - start_time_network
                     start_time_metrics = time.time()
-                    metrics = _update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
+                    metrics = metric_utils._update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,
                                             metrics, metr_batch, type)
                     timings["metrics_time"] += time.time() - start_time_metrics
 
@@ -222,7 +244,6 @@ def train_model(Config, model, run, scheduler=None):
                             type, epoch_nr, batch_nr[type] * Config.BATCH_SIZE * Config.NR_SLICES, round(np.array(print_loss).mean(), 6),
                             round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
                         print_loss = []     
-                
 
             
         ################################### Post Training tasks (each epoch) ###################################
@@ -232,19 +253,57 @@ def train_model(Config, model, run, scheduler=None):
             print("f1 macro validate: {}".format(round(metrics["f1_macro_validate"][0], 4)))
             return model
 
+
+        # if Config.distributed:
+        #     # Concatenate all predictions and labels from this process
+        #     if predictions_list and labels_list:  # Check if lists are not empty
+        #         all_predictions = torch.cat(predictions_list, dim=0)
+        #         all_labels = torch.cat(labels_list, dim=0)
+                
+        #         # Calculate metrics using the new function
+        #         metr_batch = metric_utils.calculate_metrics_for_ddp(Config, model, all_predictions, all_labels, model.device)
+                
+        #         # Update metrics
+        #         metrics = metric_utils._update_metrics_ddp(Config, metrics, metr_batch, type)
+
         # Average losses of batches in the epoch
+        # -1 element of metrics is the summed loss/f1 for batches in the current epoch
+        # by normalizing it with the number of batches, we get the average loss/f1 for the epoch
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["train"], type="train")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["test"], type="test")
 
+        # gather metrics across all processes for validation results
+        # if Config.distributed:
+        #     # Make sure metrics are properly synchronized across processes
+        #     # First ensure all processes have finished their computations
+        #     torch.distributed.barrier()
+
+        #     # Synchronize metrics across processes if using distributed training
+        #     for key in metrics:
+        #         if isinstance(metrics[key][-1], (int, float, np.int32, np.int64, np.float32, np.float64)):
+        #             # Convert to tensor for all-reduce operation
+        #             tensor = torch.tensor(metrics[key][-1]).to(model.device)
+        #             torch.distributed.all_reduce(tensor, op=torch.distributed.ReduceOp.SUM)
+        #             # Average the metric across all processes
+        #             metrics[key][-1] = tensor.item() / torch.distributed.get_world_size()
+            
+        #     # Add another barrier to ensure all processes have updated metrics
+        #     torch.distributed.barrier()
+
         # Log metrics
-        for key,value in metrics.items():
-            run[key].log(metrics[key][-1])
+        if run is not None and (not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0)):
+            for key,value in metrics.items():
+                run[key].log(metrics[key][-1])
         
-        # Log learning rate
-        run['learning_rate'].log(model.optimizer.param_groups[0]['lr'])
+            # Log learning rate
+            run['learning_rate'].log(model.optimizer.param_groups[0]['lr'])
         print("  Epoch {}, Average Epoch loss = {}".format(epoch_nr, metrics["loss_train"][-1]))
         # exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
+
+        if Config.distributed:
+            torch.distributed.barrier(device_ids=[model.device.index])
+
 
         # Adapt LR
         if Config.LR_SCHEDULE and Config.LR_SCHEDULE_TYPE == "ReduceLROnPlateau":
@@ -257,11 +316,15 @@ def train_model(Config, model, run, scheduler=None):
             model.scheduler.step()
             model.print_current_lr()
 
+        if Config.distributed:
+            torch.distributed.barrier(device_ids=[model.device.index])
+
         # Save Weights
         start_time_saving = time.time()
         if Config.SAVE_WEIGHTS:
             # save model and save optimizer state
-            model.save_model(metrics, epoch_nr, mode=Config.BEST_EPOCH_SELECTION)
+            if not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0):
+                model.save_model(metrics, epoch_nr, mode=Config.BEST_EPOCH_SELECTION)
         timings["saving_time"] += time.time() - start_time_saving
 
         epoch_time = time.time() - start_time
@@ -439,10 +502,12 @@ def test_whole_subject(Config, model, subjects, type):
     print("WHOLE SUBJECT BUNDLES:")
     pprint(metrics_bundles)
 
-    with open(join(Config.EXP_PATH, "score_" + type + "-set.txt"), "w") as f:
-        pprint(metrics, f)
-        f.write("\n\nWeights: {}\n".format(Config.WEIGHTS_PATH))
-        f.write("type: {}\n\n".format(type))
-        pprint(metrics_bundles, f)
-    pickle.dump(metrics, open(join(Config.EXP_PATH, "score_" + type + ".pkl"), "wb"))
+    # Only write files on rank 0 to avoid conflicts
+    if not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0):
+        with open(join(Config.EXP_PATH, "score_" + type + "-set.txt"), "w") as f:
+            pprint(metrics, f)
+            f.write("\n\nWeights: {}\n".format(Config.WEIGHTS_PATH))
+            f.write("type: {}\n\n".format(type))
+            pprint(metrics_bundles, f)
+        pickle.dump(metrics, open(join(Config.EXP_PATH, "score_" + type + ".pkl"), "wb"))
     return metrics
