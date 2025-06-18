@@ -1,4 +1,6 @@
 .idea
+apex*
+core*
 .vscode
 *.pyc
 *.npz
@@ -16,6 +18,7 @@ pretrained_weights
 .ipynb_checkpoints
 hcp_exp
 checkpoints
+scripts/polaris/*.o*
 tractseg/experiments/old/*
 tractseg/experiments/old_1/*
 tractseg/experiments/old_2/*
