@@ -3,13 +3,13 @@
 #PBS -N tractseg3D
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
-#PBS -l walltime=24:00:00
-#PBS -q preemptable
+#PBS -l walltime=1:00:00
+#PBS -q debug
 #PBS -j oe
 
 module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_TractSeg3D --en wholeHC105_experiment_TractSeg3D --train True --test True --seg #--rt --with_id TRAC-469
+torchrun --nnodes=1 --nproc_per_node=4  ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_TractSeg3D --en wholeHCP105_experiment_TractSeg3D --train True --test True --seg --use_ddp --use_torch_dataloader  #--rt --with_id TRAC-469
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

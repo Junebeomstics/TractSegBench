@@ -11,6 +11,28 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr3D --en run_with_wholeHCP105_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-444
-./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr3D --en run_with_wholeHCP105_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-470
-#./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr3D --en run_with_wholeHCP105_swinunetr3D --train True --test True --seg #--rt --with_id TRAC-471
+export MASTER_ADDR=`/bin/hostname -s`
+export NNODES=`wc -l < $PBS_NODEFILE`
+export NRANKS_PER_NODE=$(nvidia-smi -L | wc -l) # should be 1,2 when you test the number of gpus less than 4
+
+export TORCHINDUCTOR_COMPILE_THREADS=1
+#export TORCHINDUCTOR_CACHE_DIR=/tmp/torchinductor_$RANK
+
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+NTOTRANKS=$(( NNODES * NRANKS_PER_NODE ))
+echo "NUM_OF_NODES= ${NNODES} TOTAL_NUM_RANKS= ${NTOTRANKS} RANKS_PER_NODE= ${NRANKS_PER_NODE}"
+
+NDEPTH=16
+
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr3D --en run_with_wholeHCP105_swinunetr3D --train True --test True --gradient_clip 1 &
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr3D --en run_with_wholeHCP105_swinunetr3D  --train True --test True --gradient_clip 1 & #--rt --with_id TRAC-444
+sleep 20
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr  --train True --test True --gradient_clip 1 & #--rt --with_id TRAC-444
+sleep 20
+CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr --train True --test True --gradient_clip 1 & #--rt --with_id TRAC-444
+wait

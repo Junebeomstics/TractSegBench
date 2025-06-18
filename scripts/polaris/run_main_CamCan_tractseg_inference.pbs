@@ -1,0 +1,47 @@
+#!/bin/bash -l 
+#PBS -A NeuroX
+#PBS -N tractseg
+#PBS -l select=1:system=polaris
+#PBS -l filesystems=home:grand
+#PBS -l walltime=1:00:00
+#PBS -q debug
+#PBS -j oe
+
+module use /soft/modulefiles; module load conda; conda activate masam
+
+cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
+
+# training
+# ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train True --test True --seg 
+# 2D TractSeg
+# ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg_x4 --train True --test True --seg --num_processes 4 --rt --with_id TRAC-1142 &
+# sleep 20
+# ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg_x5 --train True --test True --seg --num_processes 4 --rt --with_id TRAC-1143 &
+# wait
+
+# inference only
+# from HCP+CAMCAN+PING
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_TractSeg_x2/best_weights_ep22.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_TractSeg_x3/best_weights_ep25.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_TractSeg_x4/best_weights_ep26.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+
+# from HCP all
+CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz & # --seg --rt --with_id TRAC-469
+wait
+
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x1/best_weights_ep68.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+
+# 밑에꺼는 학습 후 추가로 돌려야하는 세팅
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz  & # --seg --rt --with_id TRAC-469
+sleep 20
+wait
+
+
+# from HCP+PING
+
+# inference only
+ #--seg 

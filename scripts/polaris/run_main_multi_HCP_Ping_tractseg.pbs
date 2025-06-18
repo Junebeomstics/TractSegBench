@@ -1,0 +1,29 @@
+#!/bin/bash -l 
+#PBS -A NeuroX
+#PBS -N tractseg
+#PBS -l select=1:system=polaris
+#PBS -l filesystems=home:grand
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -j oe
+
+module use /soft/modulefiles; module load conda; conda activate masam
+
+cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
+
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+# training
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config HCP_Ping_experiment_TractSeg --en HCP_Ping_experiment_TractSeg --train True --test True --seg --num_processes 4 --rt --with_id TRAC-1287 & # TRAC-1147 &
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config HCP_Ping_experiment_TractSeg --en HCP_Ping_experiment_TractSeg_x1 --train True --test True --seg --num_processes 4 --rt --with_id TRAC-1288 & #--rt --with_id TRAC-1150 &
+sleep 20
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config HCP_Ping_experiment_TractSeg --en HCP_Ping_experiment_TractSeg_x2 --train True --test True --seg --num_processes 4 --rt --with_id TRAC-1289 & #--rt --with_id TRAC-1154 &
+wait
+
+# inference only
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config Ping_experiment_TractSeg --en Ping_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz #--seg 
+#./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

@@ -1,0 +1,51 @@
+#!/bin/bash -l 
+#PBS -A NeuroX
+#PBS -N swinunetr
+#PBS -l select=1:system=polaris
+#PBS -l filesystems=home:grand
+#PBS -l walltime=1:00:00
+#PBS -q debug
+#PBS -j oe
+
+module use /soft/modulefiles; module load conda; conda activate masam
+
+cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
+
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+# training
+# 2D SwinUNETR
+# ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr_x5 --train True --test True --seg --gradient_clip 1 --num_processes 2 --rt --with_id TRAC-1144 & #
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr_x6 --train True --test True --seg --gradient_clip 1 --num_processes 2 --rt --with_id TRAC-1145 & 
+
+# wait
+# inference only
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz
+#./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
+
+
+# from HCP+CAMCAN+PING
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_swinunetr_x4/best_weights_ep27.npz  & # --seg --rt --with_id TRAC-469
+# sleep 20
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_swinunetr_x5/best_weights_ep25.npz & # --seg --rt --with_id TRAC-469
+# sleep 20
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_swinunetr_x6/best_weights_ep33.npz & # --seg --rt --with_id TRAC-469
+# sleep 20
+
+# # from HCP all
+# CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz & # --seg --rt --with_id TRAC-469
+# wait
+
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x12/best_weights_ep28.npz  & # --seg --rt --with_id TRAC-469
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x13/best_weights_ep22.npz  & # --seg --rt --with_id TRAC-469
+sleep 20
+wait
+
+
+# from HCP+PING

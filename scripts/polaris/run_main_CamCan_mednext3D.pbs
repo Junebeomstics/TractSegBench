@@ -1,6 +1,6 @@
 #!/bin/bash -l 
 #PBS -A NeuroX
-#PBS -N swinunetr3D
+#PBS -N mednextB
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
 #PBS -l walltime=24:00:00
@@ -18,9 +18,13 @@ export NUMEXPR_NUM_THREADS=1
 
 # training
 # 3D SwinUNETR
-#./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr3D --en run_with_CamCan_swinunetr3D --train True --test True --seg --gradient_clip 1 --num_processes 2 #& #--rt --with_id TRAC-444
+# ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_mednext3D --en CamCan_experiment_mednext3D --train True --test True --seg --num_processes 4 & #--rt --with_id TRAC-444
+# sleep 20
+
+#./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_mednext3D --en CamCan_experiment_mednext3D --train True --test True --seg --num_processes 4 #& #--rt --with_id TRAC-444
 #sleep 20
-./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr3D --en run_with_CamCan_swinunetr3D --train True --test True --seg --gradient_clip 1 --num_processes 2 #& #--rt --with_id TRAC-444
+
+./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_mednext3D --en CamCan_experiment_mednext3D --train True --test True --seg --num_processes 4 #& #--rt --with_id TRAC-444
 #wait
 
 # inference only

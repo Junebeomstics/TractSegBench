@@ -11,5 +11,19 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x9/best_weights_ep69.npz
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+# training
+# 2D SwinUNETR
+./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr_x5 --train True --test True --seg --gradient_clip 1 --num_processes 2 --rt --with_id TRAC-1144 & #
+sleep 20
+
+./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr_x6 --train True --test True --seg --gradient_clip 1 --num_processes 2 --rt --with_id TRAC-1145 & 
+
+wait
+# inference only
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_swinunetr --en run_with_CamCan_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

@@ -3,14 +3,28 @@
 #PBS -N swinunetr
 #PBS -l select=1:system=polaris
 #PBS -l filesystems=home:grand
-#PBS -l walltime=1:00:00
-#PBS -q debug
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
 #PBS -j oe
 
 module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-echo 'starting ExpRunner'
-./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr --train True --test True --seg
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr --train True --test True --gradient_clip 1 --optimizer AdamW  &
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr  --train True --test True --gradient_clip 1 --optimizer AdamW & #--rt --with_id TRAC-444
+sleep 20
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr  --train True --test True --optimizer AdamW & #--rt --with_id TRAC-444
+sleep 20
+CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr --train True --test True  --optimizer AdamW & #--rt --with_id TRAC-444
+wait
+
+
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
