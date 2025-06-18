@@ -109,7 +109,7 @@ class Config:
     RESET_LAST_LAYER = False
     UPSAMPLE_TYPE = "bilinear"  # bilinear | nearest
     BEST_EPOCH_SELECTION = "f1"  # f1 | loss
-    METRIC_TYPES = ["loss", "f1_macro"]
+    METRIC_TYPES = ["loss", "f1_macro", "avg_grad_norm"]
     FP16 = True
     PEAK_DICE_THR = [0.95]
     PEAK_DICE_LEN_THR = 0.05
@@ -157,7 +157,7 @@ class Config:
     KEEP_INTERMEDIATE_FILES = False
     CSD_RESOLUTION = "LOW"  # HIGH | LOW
     NR_CPUS = -1
-    NUM_PROCESSES = 16 # 16 for 2D, 12 for 3D
+    NUM_PROCESSES = 4 # 16 for 2D, 12 for 3D
     GRADIENT_CLIP = None # 1.0
 
     DEEP_SUPERVISION = True

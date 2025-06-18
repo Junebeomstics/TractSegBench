@@ -84,6 +84,14 @@ def main():
     parser.add_argument("--data_path", type=str, default=None, help="Neptune run id")
     parser.add_argument("--use_torch_dataloader", action="store_true", help="use new torch dataloader")
 
+    # training-related arguments
+    parser.add_argument("--learning_rate", type=float, default=None, help="Learning rate")
+    parser.add_argument("--optimizer", type=str, default=None, help="optimizer")
+    parser.add_argument("--batch_size", type=int, default=None, help="Batch size")
+    parser.add_argument("--nr_slices", type=int, default=None, help="Number of slices to use for training")
+    parser.add_argument("--gradient_clip", type=int, default=None, help="GPU ID to use")
+    parser.add_argument("--avoid_ds", action="store_true", help="whether to deactivate deep supervision in UNET")
+    parser.add_argument("--num_processes", type=int, default=None, help="GPU ID to use")
 
      # DDP configs:
     parser.add_argument('--world_size', default=-1, type=int, 
@@ -98,7 +106,6 @@ def main():
 
     parser.add_argument("--use_dp", action="store_true", help="whether to activate DataParallel")
     parser.add_argument("--use_ddp", action="store_true", help="whether to activate DistributedDataParallel")
-    parser.add_argument("--avoid_ds", action="store_true", help="whether to deactivate deep supervision in UNET")
     args = parser.parse_args()
 
     # DDP initialization
@@ -155,8 +162,6 @@ def main():
         Config.USE_DP = args.use_dp
     if args.data_path:
         Config.DATA_PATH = args.data_path
-    if args.avoid_ds:
-        Config.DEEP_SUPERVISION = False
     if args.use_torch_dataloader:
         Config.USE_NEW_DATALOADER = args.use_torch_dataloader
     if args.use_ddp:
@@ -170,6 +175,21 @@ def main():
         Config.distributed = True
     else:
         Config.distributed = False
+    
+    if args.batch_size:
+        Config.BATCH_SIZE = args.batch_size
+    if args.nr_slices:
+        Config.NR_SLICES = args.nr_slices
+    if args.num_processes:
+        Config.NUM_PROCESSES = args.num_processes
+    if args.gradient_clip:
+        Config.GRADIENT_CLIP = args.gradient_clip
+    if args.avoid_ds:
+        Config.DEEP_SUPERVISION = False
+    if args.learning_rate:
+        Config.LEARNING_RATE = args.learning_rate
+    if args.optimizer:
+        Config.OPTIMIZER = args.optimizer
 
     Config.VERBOSE = args.verbose # by default: verbose = True
 
@@ -270,7 +290,7 @@ def main():
         model.load_model(Config.WEIGHTS_PATH)
 
     if Config.TEST:
-        trainer.test_whole_subject(Config, model, Config.TEST_SUBJECTS, "test")
+        trainer.test_whole_subject(Config, model, run, Config.TEST_SUBJECTS, "test")
 
     if Config.SEGMENT:
         exp_utils.make_dir(join(Config.EXP_PATH, "segmentations"))

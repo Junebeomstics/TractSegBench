@@ -84,9 +84,9 @@ def train_model(Config, model, run, scheduler=None):
             val_sampler = None
             test_sampler = None
         
-        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=train_sampler)
-        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(val_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=val_sampler)
-        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(test_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=test_sampler)
+        batch_gen_train = DataLoader(train_dataset, batch_size=Config.BATCH_SIZE, num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=train_sampler, persistent_workers=True)
+        batch_gen_val = DataLoader(val_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(val_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=val_sampler, persistent_workers=True)
+        batch_gen_test = DataLoader(test_dataset, batch_size=Config.VAL_BATCH_SIZE, shuffle=(test_sampler is None), num_workers=Config.NUM_PROCESSES, pin_memory=True, sampler=test_sampler, persistent_workers=True)
     else:
         if Config.DIM == "2D":
             data_loader = DataLoaderTraining2D(Config) 
@@ -182,14 +182,17 @@ def train_model(Config, model, run, scheduler=None):
                             round(time_batch_part, 3), round( time_batch_part / Config.PRINT_FREQ, 3)))
                         print_loss = []     
             else: # batchgenerator
+                #*Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)   
                 if Config.DIM == "2D":
                     nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS")) * Config.INPUT_DIM[0] # INPUT_DIM[0] = 144 for HCP data 1.25mm
+                    nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER)
                 else:
                     nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
-                
-                #*Config.EPOCH_MULTIPLIER needed to have roughly same number of updates/batches as with 2D U-Net (only valid for 3D)   
-                nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER)
-
+                    if type == "train":
+                        nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER) # 일반적인 1 epoch 세팅에 비해 2배 * 3배 = 6배 많은 iteration.
+                        #nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER) #<- 이게 올바른 형태 (Config.EPOCH_MULTIPLIER = 1)
+                    else:
+                        nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE)) # 실제 sample 만큼의 숫자
                 for i in range(nr_batches):  
                     if type == "train":
                         batch = next(batch_gen_train)
@@ -405,16 +408,35 @@ def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=Tr
     batch_generator = list(batch_generator)
     idx = 0
     for batch in tqdm(batch_generator):
-        x = batch["data"]   # (bs, nr_channels, x, y)
-        y = batch["seg"]    # (bs, nr_classes, x, y)
-        y = y.numpy()
+        x = batch["data"]   # (bs, nr_channels, x, y, (z))
+        y = batch["seg"]    # (bs, nr_classes, x, y, (z))
+        
 
-        if not only_prediction:
+        if Config.MODEL == "MASAM" and Config.DIM == "3D":
+            #bs, features, w, h, d = y.shape
+            # consistently choose the first spatial dimension for slices.
+            if Config.SAM_SLICE_DIRECTION == "x":
+                x = x.permute(0, 2, 1, 3, 4) # (bs, nr_of_channels, x, y, z) -> (bs, x, nr_of_channels, y, z)
+                #y = y.permute(0, 2, 1, 3, 4) # (bs, nr_classes, x, y, z) -> (bs, x, nr_classes, y, z)
+                #y = y.contiguous().view(-1, features, h, d)
+            elif Config.SAM_SLICE_DIRECTION == "y":
+                x = x.permute(0, 3, 1, 2, 4) # (bs, nr_of_channels, x, y, z) -> (bs, y, nr_of_channels, x, z)
+                #y = y.permute(0, 3, 1, 2, 4) # (bs, nr_classes, x, y, z) -> (bs, y, nr_classes, x, z)
+                #y = y.contiguous().view(-1, features, w, d)
+            elif Config.SAM_SLICE_DIRECTION == "z":
+                x = X.permute(0, 4, 1, 2, 3) # (bs, nr_of_channels, x, y, z) -> (bs, z, nr_of_channels, x, y)
+                #y = y.permute(0, 4, 1, 2, 3) # (bs, nr_classes, x, y, z) -> (bs, z, nr_classes, x, y)
+                #y = y.contiguous().view(-1, features, w, h) # (bs*z, nr_classes, x, y)
+            y = y.numpy()
+        
+        elif not only_prediction:
             y = y.astype(Config.LABELS_TYPE)
             if Config.DIM == "2D":
                 y = y.transpose(0, 2, 3, 1) # (bs, x, y, nr_classes)
             else:
-                y = y.transpose(0, 2, 3, 4, 1)
+                y = y.transpose(0, 2, 3, 4, 1) # (bs, x, y, z, nr_classes)
+        
+        
 
         if Config.DROPOUT_SAMPLING:
             # For Dropout Sampling (must set deterministic=False in model)
@@ -455,7 +477,7 @@ def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=Tr
     return layers_seg, layers_y
 
 
-def test_whole_subject(Config, model, subjects, type):
+def test_whole_subject(Config, model, run, subjects, type):
 
     metrics = {
         "loss_" + type: [0],
@@ -475,23 +497,25 @@ def test_whole_subject(Config, model, subjects, type):
 
         print("Took {}s".format(round(time.time() - start_time, 2)))
 
-        if Config.EXPERIMENT_TYPE == "peak_regression":
-            f1 = metric_utils.calc_peak_length_dice(Config.CLASSES, img_probs, img_y,
-                                                    max_angle_error=Config.PEAK_DICE_THR,
-                                                    max_length_error=Config.PEAK_DICE_LEN_THR)
-            peak_f1_mean = np.array([s for s in f1.values()]).mean()  # if f1 for multiple bundles
-            metrics = metric_utils.calculate_metrics(metrics, None, None, 0, f1=peak_f1_mean,
-                                                     type=type, threshold=Config.THRESHOLD)
-            metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, None, None,
-                                                                         dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
-                                                                         f1, threshold=Config.THRESHOLD)
-        else:
-            img_probs = np.reshape(img_probs, (-1, img_probs.shape[-1]))  # Flatten all dims except nr_classes dim
-            img_y = np.reshape(img_y, (-1, img_y.shape[-1]))
-            metrics = metric_utils.calculate_metrics(metrics, img_y, img_probs, 0,
-                                                     type=type, threshold=Config.THRESHOLD)
-            metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, img_y, img_probs,
-                                                                         dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
+        # if Config.EXPERIMENT_TYPE == "peak_regression":
+        #     f1 = metric_utils.calc_peak_length_dice(Config.CLASSES, img_probs, img_y,
+        #                                             max_angle_error=Config.PEAK_DICE_THR,
+        #                                             max_length_error=Config.PEAK_DICE_LEN_THR)
+        #     peak_f1_mean = np.array([s for s in f1.values()]).mean()  # if f1 for multiple bundles
+        #     metrics = metric_utils.calculate_metrics(metrics, None, None, 0, f1=peak_f1_mean,
+        #                                              type=type, threshold=Config.THRESHOLD)
+        #     metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, None, None,
+        #                                                                  dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
+        #                                                                  f1, threshold=Config.THRESHOLD)
+        # else:
+        print('img_probs.shape',img_probs.shape)
+        print('img_y.shape', img_y.shape)
+        img_probs = np.reshape(img_probs, (-1, img_probs.shape[-1]))  # Flatten all dims except nr_classes dim
+        img_y = np.reshape(img_y, (-1, img_y.shape[-1]))
+        metrics = metric_utils.calculate_metrics(metrics, img_y, img_probs, 0,
+                                                    type=type, threshold=Config.THRESHOLD)
+        metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, img_y, img_probs,
+                                                                        dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
                                                                          threshold=Config.THRESHOLD)
 
     metrics = metric_utils.normalize_last_element(metrics, len(subjects), type=type)
@@ -499,8 +523,13 @@ def test_whole_subject(Config, model, subjects, type):
 
     print("WHOLE SUBJECT:")
     pprint(metrics)
+    for key,value in metrics.items():
+        run['whole_'+key].log(metrics[key][-1])
+
     print("WHOLE SUBJECT BUNDLES:")
     pprint(metrics_bundles)
+    for key, value in metrics_bundles.items():
+        run['whole_' + key].log(metrics_bundles[key][-1])
 
     # Only write files on rank 0 to avoid conflicts
     if not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0):

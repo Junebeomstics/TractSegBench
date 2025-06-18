@@ -43,7 +43,7 @@ from tractseg.data.spatial_transform_custom import SpatialTransformCustom
 from tractseg.libs.system_config import SystemConfig as C
 from tractseg.libs import data_utils
 from tractseg.libs import peak_utils
-
+from tractseg.data.subjects import get_all_subjects 
 
 def load_training_data(Config, subject):
     """
@@ -61,139 +61,156 @@ def load_training_data(Config, subject):
         data = nib.load(filepath + ".nii.gz").get_fdata()
         # data = np.load(filepath + ".npy", mmap_mode="r")
         return data
-    if Config.FEATURES_FILENAME == "90g270g":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.5:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
-    elif Config.FEATURES_FILENAME == "12g90g270g":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.33:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-        elif rnd_choice < 0.66:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
-    elif Config.FEATURES_FILENAME == "12g90g270gRaw32g":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.33:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_raw32g"))
-        elif rnd_choice < 0.66:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_raw32g"))
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_raw32g"))
-
-    elif Config.FEATURES_FILENAME == "12g90g270g_BX":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.33:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
-        elif rnd_choice < 0.66:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
-
-    elif Config.FEATURES_FILENAME == "12g90g270g_FA":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.33:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_FA"))
-        elif rnd_choice < 0.66:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_FA"))
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_FA"))
-
-    elif Config.FEATURES_FILENAME == "12g90g270g_CSD_BX":
-        rnd_choice_1 = np.random.random()
-        rnd_choice_2 = np.random.random()
-        if rnd_choice_1 < 0.5:  # CSD
-            if rnd_choice_2 < 0.33:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-            elif rnd_choice_2 < 0.66:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
-            else:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
-        else:  # BX
-            if rnd_choice_2 < 0.33:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
-            elif rnd_choice_2 < 0.66:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
-            else:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
-            # Flip x axis to make BedpostX compatible with mrtrix CSD
-            data[:, :, :, 0] *= -1
-            data[:, :, :, 3] *= -1
-            data[:, :, :, 6] *= -1
-
-    elif Config.FEATURES_FILENAME == "32g90g270g_CSD_BX":
-        rnd_choice_1 = np.random.random()
-        rnd_choice_2 = np.random.random()
-        if rnd_choice_1 < 0.5:  # CSD
-            if rnd_choice_2 < 0.33:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-            elif rnd_choice_2 < 0.66:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
-            else:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_peaks"))
-        else:  # BX
-            if rnd_choice_2 < 0.5:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
-            else:
-                data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled"))
-            # Flip x axis to make BedpostX compatible with mrtrix CSD
-            data[:, :, :, 0] *= -1
-            data[:, :, :, 3] *= -1
-            data[:, :, :, 6] *= -1
-
-    elif Config.FEATURES_FILENAME == "105g_CSD_BX":
-        rnd_choice_1 = np.random.random()
-        if rnd_choice_1 < 0.5:  # CSD
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_peaks"))
-        else:  # BX
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_bedpostx_peaks_scaled"))
-            # Flip x axis to make BedpostX compatible with mrtrix CSD
-            data[:, :, :, 0] *= -1
-            data[:, :, :, 3] *= -1
-            data[:, :, :, 6] *= -1
-
-    elif Config.FEATURES_FILENAME == "32g270g_BX":
-        rnd_choice = np.random.random()
-        path_32g = join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled")
-        if rnd_choice < 0.5:
-            data = load(path_32g)
-            rnd_choice_2 = np.random.random()
-            if rnd_choice_2 < 0.5:
-                data[:, :, :, 6:9] = 0  # set third peak to 0
-        else:
-            data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
-
-    elif Config.FEATURES_FILENAME == "T1_Peaks270g":
-        peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-        t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
-        data = np.concatenate((peaks, t1), axis=3)
-
-    elif Config.FEATURES_FILENAME == "T1_Peaks12g90g270g":
-        rnd_choice = np.random.random()
-        if rnd_choice < 0.33:
-            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
-        elif rnd_choice < 0.66:
-            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
-        else:
-            peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
-        t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
-        data = np.concatenate((peaks, t1), axis=3)
-
-    else:
-        data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.FEATURES_FILENAME))
-
-    if "|" in Config.LABELS_FILENAME:
-        parts = Config.LABELS_FILENAME.split("|")
-        seg = []  # [4, x, y, z, 54]
-        for part in parts:
-            seg.append(load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, part)))
-        seg = np.array(seg).transpose(1, 2, 3, 4, 0)
-        seg = seg.reshape(data.shape[:3] + (-1,))  # [x, y, z, 54*4]
-    else:
+    
+    
+    if type(Config.DATASET) == str:        
+        data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.FEATURES_FILENAME))        
         seg = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.LABELS_FILENAME))
+    elif type(Config.DATASET) == list:
+        for dataset, dataset_folder,features_filename, labels_filename in zip(Config.DATASET,Config.DATASET_FOLDER, Config.FEATURES_FILENAME, Config.LABELS_FILENAME):
+            if subject in get_all_subjects(Config, dataset, dataset_folder):
+                data = load(join(Config.DATA_PATH, dataset_folder, subject, features_filename))        
+                seg = load(join(Config.DATA_PATH, dataset_folder, subject, labels_filename))
+                break
+
+    
+
+    # for dataset, dataset_folder, features_filename, labels_filename in zip(datasets, dataset_folders, features_filenames, labels_filenames):
+
+    # if Config.FEATURES_FILENAME == "90g270g":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.5:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    # elif Config.FEATURES_FILENAME == "12g90g270g":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.33:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #     elif rnd_choice < 0.66:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+    # elif Config.FEATURES_FILENAME == "12g90g270gRaw32g":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.33:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_raw32g"))
+    #     elif rnd_choice < 0.66:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_raw32g"))
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_raw32g"))
+
+    # elif Config.FEATURES_FILENAME == "12g90g270g_BX":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.33:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+    #     elif rnd_choice < 0.66:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
+
+    # elif Config.FEATURES_FILENAME == "12g90g270g_FA":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.33:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_FA"))
+    #     elif rnd_choice < 0.66:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_FA"))
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_FA"))
+
+    # elif Config.FEATURES_FILENAME == "12g90g270g_CSD_BX":
+    #     rnd_choice_1 = np.random.random()
+    #     rnd_choice_2 = np.random.random()
+    #     if rnd_choice_1 < 0.5:  # CSD
+    #         if rnd_choice_2 < 0.33:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #         elif rnd_choice_2 < 0.66:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    #         else:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+    #     else:  # BX
+    #         if rnd_choice_2 < 0.33:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+    #         elif rnd_choice_2 < 0.66:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_bedpostx_peaks_scaled"))
+    #         else:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_bedpostx_peaks_scaled"))
+    #         # Flip x axis to make BedpostX compatible with mrtrix CSD
+    #         data[:, :, :, 0] *= -1
+    #         data[:, :, :, 3] *= -1
+    #         data[:, :, :, 6] *= -1
+
+    # elif Config.FEATURES_FILENAME == "32g90g270g_CSD_BX":
+    #     rnd_choice_1 = np.random.random()
+    #     rnd_choice_2 = np.random.random()
+    #     if rnd_choice_1 < 0.5:  # CSD
+    #         if rnd_choice_2 < 0.33:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #         elif rnd_choice_2 < 0.66:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    #         else:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_peaks"))
+    #     else:  # BX
+    #         if rnd_choice_2 < 0.5:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+    #         else:
+    #             data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled"))
+    #         # Flip x axis to make BedpostX compatible with mrtrix CSD
+    #         data[:, :, :, 0] *= -1
+    #         data[:, :, :, 3] *= -1
+    #         data[:, :, :, 6] *= -1
+
+    # elif Config.FEATURES_FILENAME == "105g_CSD_BX":
+    #     rnd_choice_1 = np.random.random()
+    #     if rnd_choice_1 < 0.5:  # CSD
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_peaks"))
+    #     else:  # BX
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "105g_2mm_bedpostx_peaks_scaled"))
+    #         # Flip x axis to make BedpostX compatible with mrtrix CSD
+    #         data[:, :, :, 0] *= -1
+    #         data[:, :, :, 3] *= -1
+    #         data[:, :, :, 6] *= -1
+
+    # elif Config.FEATURES_FILENAME == "32g270g_BX":
+    #     rnd_choice = np.random.random()
+    #     path_32g = join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "32g_125mm_bedpostx_peaks_scaled")
+    #     if rnd_choice < 0.5:
+    #         data = load(path_32g)
+    #         rnd_choice_2 = np.random.random()
+    #         if rnd_choice_2 < 0.5:
+    #             data[:, :, :, 6:9] = 0  # set third peak to 0
+    #     else:
+    #         data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_bedpostx_peaks_scaled"))
+
+    # elif Config.FEATURES_FILENAME == "T1_Peaks270g":
+    #     peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #     t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
+    #     data = np.concatenate((peaks, t1), axis=3)
+
+    # elif Config.FEATURES_FILENAME == "T1_Peaks12g90g270g":
+    #     rnd_choice = np.random.random()
+    #     if rnd_choice < 0.33:
+    #         peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "270g_125mm_peaks"))
+    #     elif rnd_choice < 0.66:
+    #         peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "90g_125mm_peaks"))
+    #     else:
+    #         peaks = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "12g_125mm_peaks"))
+    #     t1 = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, "T1"))
+    #     data = np.concatenate((peaks, t1), axis=3)
+
+    # else:
+    
+        #data = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.FEATURES_FILENAME))
+
+    # if "|" in Config.LABELS_FILENAME:
+    #     parts = Config.LABELS_FILENAME.split("|")
+    #     seg = []  # [4, x, y, z, 54]
+    #     for part in parts:
+    #         seg.append(load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, part)))
+    #     seg = np.array(seg).transpose(1, 2, 3, 4, 0)
+    #     seg = seg.reshape(data.shape[:3] + (-1,))  # [x, y, z, 54*4]
+    # else:
+        #seg = load(join(Config.DATA_PATH, Config.DATASET_FOLDER, subject, Config.LABELS_FILENAME))
 
     return data, seg
 

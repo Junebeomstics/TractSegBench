@@ -342,6 +342,11 @@ class SwinUNETR(nn.Module):
 
             # Deep supervision at decoder3 output level (after dec3)
             # Input is the concatenation of previous upsampled output with current level features
+            self.ds_output_2 = conv_class(feature_size * 4, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
+            self.ds_output_2_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
+
+            # Deep supervision at decoder3 output level (after dec3)
+            # Input is the concatenation of previous upsampled output with current level features
             self.ds_output_1 = conv_class(feature_size * 2, out_channels, kernel_size=1, stride=1, padding=0, bias=True)
             self.ds_output_1_up = nn.Upsample(scale_factor=2, mode=self.upsample_mode, align_corners=False)
             
@@ -480,7 +485,11 @@ class SwinUNETR(nn.Module):
         # TractSeg uses the concat of dec3 and enc3 for supervision, 
         # we'll use dec3 which is before the concat
         if self.deep_supervision:
+            ds_output_2 = self.ds_output_2(dec2)
+            ds_output_2_up = self.ds_output_2_up(ds_output_2)
+
             ds_output_1 = self.ds_output_1(dec1)
+            ds_output_1 = ds_output_2_up + ds_output_1
             ds_output_1_up = self.ds_output_1_up(ds_output_1)
             
             # Second deep supervision at level 3

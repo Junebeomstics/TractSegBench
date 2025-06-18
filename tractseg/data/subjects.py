@@ -103,8 +103,9 @@ all_subjects_FINAL_with_complete_90g = [s for s in all_subjects_FINAL if s not i
 
 all_subjects_FINAL_with_complete_vis = [s for s in all_subjects_HCP_all if s not in subjects_vis_incomplete]
 
-def get_all_subjects(Config):
-    dataset = Config.DATASET
+def get_all_subjects(Config, dataset=None, dataset_folder=None):
+    dataset = dataset if dataset else Config.DATASET
+    dataset_folder = dataset_folder if dataset_folder else Config.DATASET_FOLDER
     if dataset == "HCP" or dataset == "HCP_final" or dataset == "HCP_32g":
         return all_subjects_FINAL
     elif dataset == "HCP_90g": # all HCP subjects except belonging to 90g incomplete
@@ -120,7 +121,7 @@ def get_all_subjects(Config):
     elif dataset.startswith("biobank_10"):
         return all_subjects_biobank_10 * 10
     else:
-        all_subjects_any = sorted(os.listdir(join(Config.DATA_PATH,Config.DATASET_FOLDER)))
+        all_subjects_any = sorted(os.listdir(join(Config.DATA_PATH,dataset_folder)))
         print(f"Subject list of {dataset} not pre-defined, returning all {len(all_subjects_any)} subjects available in the folder")
         
         if len(all_subjects_any) == 0:

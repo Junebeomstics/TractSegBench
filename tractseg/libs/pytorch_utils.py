@@ -24,11 +24,39 @@ def load_checkpoint(path, **kwargs):
         # for resume_training or loading pre-trained weights
         if key == 'unet':
             print('using pre-trained weights for unet')
-            value.load_state_dict(checkpoint['unet'] if 'unet' in checkpoint else checkpoint)
-            # COMPILE argument can add 
+            unet_state_dict = checkpoint['unet'] if 'unet' in checkpoint else checkpoint
+
+            # fix keys with '_orig_mod.' prefix
+            new_state_dict = {}
+            for k, v in unet_state_dict.items():
+                new_key = k
+                if k.startswith('_orig_mod.'):
+                    new_key = k[len('_orig_mod.'):]  # remove '_orig_mod.' prefix for compatibility
+                new_state_dict[new_key] = v
+
+            # load the corrected state_dict
+            value.load_state_dict(new_state_dict)
+
             updates += 1
         # for resume_training
-        elif key in ['optimizer','scheduler']:
+        elif key == 'optimizer':
+            print('using pre-trained states for {}'.format(key))
+            optimizer_state_dict = checkpoint[key]
+            
+            if 'state' in optimizer_state_dict:
+                new_state = {}
+                for param_key, param_state in optimizer_state_dict['state'].items():
+                    if isinstance(param_key, str) and param_key.startswith('_orig_mod.'):
+                        new_param_key = param_key[len('_orig_mod.'):]
+                        new_state[new_param_key] = param_state
+                    else:
+                        new_state[param_key] = param_state
+                optimizer_state_dict['state'] = new_state
+            
+            value.load_state_dict(optimizer_state_dict)
+            updates += 1
+            
+        elif key == 'scheduler':
             print('using pre-trained states for {}'.format(key))
             value.load_state_dict(checkpoint[key])
             updates += 1

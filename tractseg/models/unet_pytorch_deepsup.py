@@ -10,8 +10,9 @@ from tractseg.libs.pytorch_utils import conv2d
 from tractseg.libs.pytorch_utils import deconv2d
 
 class UNet_Pytorch_DeepSup(torch.nn.Module):
-    def __init__(self, n_input_channels=3, n_classes=7, n_filt=64, batchnorm=False, dropout=False, upsample="bilinear"):
+    def __init__(self, n_input_channels=3, n_classes=7, n_filt=64, batchnorm=False, dropout=False, upsample="bilinear", deep_supervision=True):
         super(UNet_Pytorch_DeepSup, self).__init__()
+        self.deep_supervision = deep_supervision
         self.in_channel = n_input_channels
         self.n_classes = n_classes
         self.use_dropout = dropout
@@ -49,19 +50,19 @@ class UNet_Pytorch_DeepSup(torch.nn.Module):
         self.deconv_3 = deconv2d(n_filt * 4, n_filt * 4, kernel_size=2, stride=2)
         # self.deconv_3 = nn.Upsample(scale_factor=2)
 
-        # Deep Supervision
-        self.output_2 = nn.Conv2d(n_filt * 4 + n_filt * 8, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        # 'nearest' a bit faster but results a little worse (~0.4 dice points worse)
-        self.output_2_up = nn.Upsample(scale_factor=2, mode=upsample)
-
         self.expand_3_1 = conv2d(n_filt * 2 + n_filt * 4, n_filt * 2, stride=1)
         self.expand_3_2 = conv2d(n_filt * 2, n_filt * 2, stride=1)
         self.deconv_4 = deconv2d(n_filt * 2, n_filt * 2, kernel_size=2, stride=2)
         # self.deconv_4 = nn.Upsample(scale_factor=2)
 
         # Deep Supervision
-        self.output_3 = nn.Conv2d(n_filt * 2 + n_filt * 4, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        self.output_3_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
+        if self.deep_supervision:
+            self.output_2 = nn.Conv2d(n_filt * 4 + n_filt * 8, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
+            # 'nearest' a bit faster but results a little worse (~0.4 dice points worse)
+            self.output_2_up = nn.Upsample(scale_factor=2, mode=upsample)
+
+            self.output_3 = nn.Conv2d(n_filt * 2 + n_filt * 4, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
+            self.output_3_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
 
         self.expand_4_1 = conv2d(n_filt + n_filt * 2, n_filt, stride=1)
         self.expand_4_2 = conv2d(n_filt, n_filt, stride=1)
@@ -103,18 +104,10 @@ class UNet_Pytorch_DeepSup(torch.nn.Module):
         expand_2_2 = self.expand_2_2(expand_2_1)
         deconv_3 = self.deconv_3(expand_2_2)
 
-        # Deep Supervision
-        output_2 = self.output_2(concat2)
-        output_2_up = self.output_2_up(output_2)
-
         concat3 = torch.cat([deconv_3, contr_2_2], 1)
         expand_3_1 = self.expand_3_1(concat3)
         expand_3_2 = self.expand_3_2(expand_3_1)
         deconv_4 = self.deconv_4(expand_3_2)
-
-        # Deep Supervision
-        output_3 = output_2_up + self.output_3(concat3)
-        output_3_up = self.output_3_up(output_3)
 
         concat4 = torch.cat([deconv_4, contr_1_2], 1)
         expand_4_1 = self.expand_4_1(concat4)
@@ -122,6 +115,16 @@ class UNet_Pytorch_DeepSup(torch.nn.Module):
 
         conv_5 = self.conv_5(expand_4_2)
 
-        final = output_3_up + conv_5
+        # Deep Supervision
+        if self.deep_supervision:
+            output_2 = self.output_2(concat2)
+            output_2_up = self.output_2_up(output_2)
+
+            output_3 = output_2_up + self.output_3(concat3)
+            output_3_up = self.output_3_up(output_3)
+            
+            final = output_3_up + conv_5
+        else:
+            final = conv_5
 
         return final

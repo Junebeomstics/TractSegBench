@@ -12,8 +12,9 @@ from tractseg.libs.pytorch_utils import deconv3d
 
 class UNet3D_Pytorch_DeepSup_sm(torch.nn.Module):
     def __init__(self, n_input_channels=3, n_classes=7, n_filt=64, batchnorm=False,
-                 dropout=False, upsample="trilinear"):
+                 dropout=False, upsample="trilinear", deep_supervision=True):
         super(UNet3D_Pytorch_DeepSup_sm, self).__init__()
+        self.deep_supervision = deep_supervision
         self.in_channel = n_input_channels
         self.n_classes = n_classes
         self.dropout = dropout
@@ -45,17 +46,20 @@ class UNet3D_Pytorch_DeepSup_sm(torch.nn.Module):
         self.expand_2_2 = conv3d(n_filt * 4, n_filt * 4, stride=1)
         self.deconv_3 = deconv3d(n_filt * 4, n_filt * 2, kernel_size=2, stride=2)
 
-        self.output_2 = nn.Conv3d(n_filt * 4 + n_filt * 4, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        self.output_2_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
-
+        
         # Up 2
         self.expand_3_1 = conv3d(n_filt * 2 + n_filt * 2, n_filt * 2, stride=1)
         self.expand_3_2 = conv3d(n_filt * 2, n_filt * 2, stride=1)
         self.deconv_4 = deconv3d(n_filt * 2, n_filt * 1, kernel_size=2, stride=2)
 
-        self.output_3 = nn.Conv3d(n_filt * 2 + n_filt * 2, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
-        self.output_3_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
+        # Deep Supervision
+        if self.deep_supervision:
+            self.output_2 = nn.Conv3d(n_filt * 4 + n_filt * 4, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
+            self.output_2_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
 
+            self.output_3 = nn.Conv3d(n_filt * 2 + n_filt * 2, n_classes, kernel_size=1, stride=1, padding=0, bias=True)
+            self.output_3_up = nn.Upsample(scale_factor=2, mode=upsample)  # does only upscale width and height
+        
         # Up 3
         self.expand_4_1 = conv3d(n_filt + n_filt * 1, n_filt, stride=1)
         self.expand_4_2 = conv3d(n_filt, n_filt, stride=1)
@@ -88,16 +92,10 @@ class UNet3D_Pytorch_DeepSup_sm(torch.nn.Module):
         expand_2_2 = self.expand_2_2(expand_2_1)
         deconv_3 = self.deconv_3(expand_2_2)
 
-        output_2 = self.output_2(concat2)
-        output_2_up = self.output_2_up(output_2)
-
         concat3 = torch.cat([deconv_3, contr_2_2], 1)
         expand_3_1 = self.expand_3_1(concat3)
         expand_3_2 = self.expand_3_2(expand_3_1)
         deconv_4 = self.deconv_4(expand_3_2)
-
-        output_3 = output_2_up + self.output_3(concat3)
-        output_3_up = self.output_3_up(output_3)
 
         concat4 = torch.cat([deconv_4, contr_1_2], 1)
         expand_4_1 = self.expand_4_1(concat4)
@@ -105,6 +103,16 @@ class UNet3D_Pytorch_DeepSup_sm(torch.nn.Module):
 
         conv_5 = self.conv_5(expand_4_2)
 
-        final = output_3_up + conv_5
+        # Deep Supervision
+        if self.deep_supervision:
+            output_2 = self.output_2(concat2)
+            output_2_up = self.output_2_up(output_2)
 
+            output_3 = output_2_up + self.output_3(concat3)
+            output_3_up = self.output_3_up(output_3)
+
+            final = output_3_up + conv_5
+        else:
+            final = conv_5
+            
         return final

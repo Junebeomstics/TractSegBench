@@ -381,64 +381,129 @@ def get_dwi_affine(dataset, resolution):
 
 def get_cv_fold(Config):
     fold=Config.CV_FOLD
-    dataset=Config.DATASET
-    if dataset == "HCP_all" or dataset == "HCP_vis" or dataset == "CamCan": # all_subjects_HCP_all (1061 subjects are used) 
-        # 1061 subjects are loaded in the fixed order.
-        subjects = [subject for subject in get_all_subjects(Config) if os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.FEATURES_FILENAME+'.nii.gz')) and os.path.exists(os.path.join(Config.DATA_PATH,Config.DATASET_FOLDER,subject,Config.LABELS_FILENAME+'.nii.gz')) ]
-        print('len(subjects)',len(subjects))
-        # fifteen percent of validate subjects and fiften percent of test subjects
-        cut_point_1 = int(len(subjects) * 0.7)
-        cut_point_2 = int(len(subjects) * 0.85)
+    if type(Config.DATASET) == list:
+        datasets = Config.DATASET
+        dataset_folders = Config.DATASET_FOLDER
+        features_filenames = Config.FEATURES_FILENAME
+        labels_filenames = Config.LABELS_FILENAME
+    elif type(Config.DATASET) == str:        
+        datasets = [Config.DATASET]
+        dataset_folders = [Config.DATASET_FOLDER]
+        features_filenames = [Config.FEATURES_FILENAME]
+        labels_filenames = [Config.LABELS_FILENAME]
+    
+    train_dict = {}
+    validate_dict = {}
+    test_dict = {}
 
-        TEST_SUBJECTS = subjects[cut_point_2:] # use fixed set of test subjects
-        TRAIN_VALIDATE_SUBJECTS = subjects[:cut_point_2] # use fixed set of train and validate subjects
-        if fold == 0:
-            return TRAIN_VALIDATE_SUBJECTS[:cut_point_1], TRAIN_VALIDATE_SUBJECTS[cut_point_1:cut_point_2], TEST_SUBJECTS
-        elif fold > 0:
-            rng = np.random.default_rng(fold)  
-            rng.shuffle(TRAIN_VALIDATE_SUBJECTS)
-            return TRAIN_VALIDATE_SUBJECTS[:cut_point_1],TRAIN_VALIDATE_SUBJECTS[cut_point_1:], TEST_SUBJECTS
-    elif dataset == "HCP_90g": # all_subjects_FINAL_with_complete_90g (1049 subjects are used)
-        subjects = get_all_subjects(Config)
-        cut_point = int(len(subjects) * 0.7)
-        return subjects[:cut_point], subjects[cut_point:], ["599671", "599469"]
-    # elif dataset == "biobank_20k" or dataset == "biobank_10":
-    #     subjects = get_all_subjects(dataset)
-    #     cut_point = int(len(subjects) * 0.9)
-    #     return subjects[:cut_point], subjects[cut_point:], ["1000013", "1000013"]
-    else: # dataset == "HCP" goes here, which means that only 105 subjects are used (all_subjects_FINAL)
-        if fold == 0:
-            train, validate, test = [0, 1, 2], [3], [4]
-        # elif fold == 1:
-        #     train, validate, test = [1, 2, 3], [4], [0]
-        # elif fold == 2:
-        #     train, validate, test = [2, 3, 4], [0], [1]
-        # elif fold == 3:
-        #     train, validate, test = [3, 4, 0], [1], [2]
-        # elif fold == 4:
-        #     train, validate, test = [4, 0, 1], [2], [3]
-        # use fixed set of test subjects
-        elif fold == 1:
-            train, validate, test = [1, 2, 3], [0], [4]
-        elif fold == 2:
-            train, validate, test = [0, 2, 3], [1], [4]
-        elif fold == 3:
-            train, validate, test = [0, 1, 3], [2], [4]
-        elif fold == 4:
-            train, validate, test = [0, 1, 2], [3], [4]
+    for dataset, dataset_folder, features_filename, labels_filename in zip(datasets, dataset_folders, features_filenames, labels_filenames):
+        if dataset == "HCP_all" or dataset == "HCP_vis" or dataset == "CamCan" or dataset == "Ping": # all_subjects_HCP_all (1061 subjects are used) 
+            # 1061 subjects are loaded in the fixed order.
+            subjects = [subject for subject in get_all_subjects(Config, dataset, dataset_folder) 
+                        if os.path.exists(os.path.join(Config.DATA_PATH,dataset_folder,subject,features_filename+'.nii.gz')) 
+                        and os.path.exists(os.path.join(Config.DATA_PATH,dataset_folder,subject,labels_filename+'.nii.gz'))]
+            print(f'len(subjects) of {dataset}', len(subjects))
+            # fifteen percent of validate subjects and fiften percent of test subjects
+            cut_point_1 = int(len(subjects) * 0.7)
+            cut_point_2 = int(len(subjects) * 0.85)
 
-        subjects = get_all_subjects(Config) # only 105 subjects are used (all_subjects_FINAL)
-        if dataset.startswith("HCP"):
-            subjects = list(utils.chunks(subjects, 21))   #5 folds a 21 subjects
-            # 5 fold CV ok (score only 1%-point worse than 10 folds (80 vs 60 train subjects) (10 Fold CV impractical!)
-        elif dataset.startswith("Schizo"):
-            # ~410 subjects
-            subjects = list(utils.chunks(subjects, 82))  # 5 folds a 82 subjects
-        else:
-            raise ValueError("Invalid dataset name")
+            TEST_SUBJECTS = subjects[cut_point_2:] # use fixed set of test subjects
+            TRAIN_VALIDATE_SUBJECTS = subjects[:cut_point_2] # use fixed set of train and validate subjects
+            if fold == 0:
+                train_dict[dataset] = TRAIN_VALIDATE_SUBJECTS[:cut_point_1]
+                validate_dict[dataset] = TRAIN_VALIDATE_SUBJECTS[cut_point_1:cut_point_2]
+                test_dict[dataset] = TEST_SUBJECTS
+            elif fold > 0:
+                rng = np.random.default_rng(fold)  
+                rng.shuffle(TRAIN_VALIDATE_SUBJECTS)
+                train_dict[dataset] = TRAIN_VALIDATE_SUBJECTS[:cut_point_1]
+                validate_dict[dataset] = TRAIN_VALIDATE_SUBJECTS[cut_point_1:]
+                test_dict[dataset] = TEST_SUBJECTS
+        elif dataset == "HCP_90g": # all_subjects_FINAL_with_complete_90g (1049 subjects are used)
+            subjects = get_all_subjects(Config, dataset, dataset_folder)
+            cut_point = int(len(subjects) * 0.7)
+            train_dict[dataset] = subjects[:cut_point]
+            validate_dict[dataset] = subjects[cut_point:]
+            test_dict[dataset] = ["599671", "599469"]
+        else: # dataset == "HCP" goes here, which means that only 105 subjects are used (all_subjects_FINAL)
+            if fold == 0:
+                train, validate, test = [0, 1, 2], [3], [4]
+            elif fold == 1:
+                train, validate, test = [1, 2, 3], [0], [4]
+            elif fold == 2:
+                train, validate, test = [0, 2, 3], [1], [4]
+            elif fold == 3:
+                train, validate, test = [0, 1, 3], [2], [4]
+            elif fold == 4:
+                train, validate, test = [0, 1, 2], [3], [4]
 
-        subjects = np.array(subjects)
-        return list(subjects[train].flatten()), list(subjects[validate].flatten()), list(subjects[test].flatten())
+            subjects = get_all_subjects(Config, dataset, dataset_folder) # only 105 subjects are used (all_subjects_FINAL)
+            if dataset.startswith("HCP"):
+                subjects = list(utils.chunks(subjects, 21))   #5 folds a 21 subjects
+            elif dataset.startswith("Schizo"):
+                # ~410 subjects
+                subjects = list(utils.chunks(subjects, 82))  # 5 folds a 82 subjects
+            else:
+                raise ValueError("Invalid dataset name")
+
+            subjects = np.array(subjects)
+            train_dict[dataset] = subjects[train].flatten().tolist()
+            validate_dict[dataset] = subjects[validate].flatten().tolist()
+            test_dict[dataset] = subjects[test].flatten().tolist()
+
+    # Sample subjects according to Config.SAMPLE_N_SUBJECTS if specified
+    if hasattr(Config, 'SAMPLE_N_SUBJECTS') and Config.SAMPLE_N_SUBJECTS > 0:
+        # Calculate the total number of subjects in each split
+        total_train = sum(len(subjects) for subjects in train_dict.values())
+        total_validate = sum(len(subjects) for subjects in validate_dict.values())
+        total_test = sum(len(subjects) for subjects in test_dict.values())
+        
+        # Create sampled dictionaries
+        sampled_train_dict = {}
+        sampled_validate_dict = {}
+        sampled_test_dict = {}
+        
+        # Sample training subjects based on original dataset proportions
+        for dataset, subjects in train_dict.items():
+            proportion = len(subjects) / total_train
+            n_sample = max(1, int(Config.SAMPLE_N_SUBJECTS * 0.7 * proportion))
+            if len(subjects) > n_sample:
+                np.random.seed(fold)
+                sampled_train_dict[dataset] = np.random.choice(subjects, n_sample, replace=False).tolist()
+            else:
+                sampled_train_dict[dataset] = subjects
+        
+        # Sample validation subjects based on original dataset proportions
+        for dataset, subjects in validate_dict.items():
+            proportion = len(subjects) / total_validate
+            n_sample = max(1, int(Config.SAMPLE_N_SUBJECTS * 0.15 * proportion))
+            if len(subjects) > n_sample:
+                np.random.seed(fold)
+                sampled_validate_dict[dataset] = np.random.choice(subjects, n_sample, replace=False).tolist()
+            else:
+                sampled_validate_dict[dataset] = subjects
+        
+        # Sample test subjects based on original dataset proportions
+        for dataset, subjects in test_dict.items():
+            proportion = len(subjects) / total_test
+            n_sample = max(1, int(Config.SAMPLE_N_SUBJECTS * 0.15 * proportion))
+            if len(subjects) > n_sample:
+                np.random.seed(fold)
+                sampled_test_dict[dataset] = np.random.choice(subjects, n_sample, replace=False).tolist()
+            else:
+                sampled_test_dict[dataset] = subjects
+        
+        # Replace the original dictionaries with the sampled ones
+        train_dict = sampled_train_dict
+        validate_dict = sampled_validate_dict
+        test_dict = sampled_test_dict
+
+    # Flatten all subjects from all datasets
+    total_train_subjects = [subject for subjects in train_dict.values() for subject in subjects]
+    total_validate_subjects = [subject for subjects in validate_dict.values() for subject in subjects]
+    total_test_subjects = [subject for subjects in test_dict.values() for subject in subjects]
+
+    return total_train_subjects, total_validate_subjects, total_test_subjects
 
 
 def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):

@@ -87,6 +87,19 @@ class MRISliceDataset(Dataset):
                 x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
                 y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16), mode='constant', kwargs={'constant_values': 0})
 
+            x = x.astype(np.float32)
+            y = y.astype(np.float32)
+
+            # Apply transformations
+            if self.transform:
+                output = self.transform(**{'data':x, 'seg':y})
+            else:
+                output = None
+            
+            data_dict = {"subject": subject,
+                        "data": output['data'] if output else x,  # (nr_slices, channels, x, y, [z])
+                        "seg": output['seg'] if output else y, # (nr_slices, channels, x, y, [z])
+                        "slice_dir": slice_direction} 
 
         elif self.config.DIM == "3D":
             subject = self.subjects[idx]
@@ -98,21 +111,22 @@ class MRISliceDataset(Dataset):
             else:
                 x = pad_nd_image(x, shape_must_be_divisible_by=(16, 16, 16), mode='constant', kwargs={'constant_values': 0})
                 y = pad_nd_image(y, shape_must_be_divisible_by=(16, 16, 16), mode='constant', kwargs={'constant_values': 0})
-
+            
         
-        x = x.astype(np.float32)
-        y = y.astype(np.float32)
+            x = x.astype(np.float32)
+            y = y.astype(np.float32)
 
-        # Apply transformations
-        if self.transform:
-            output = self.transform(**{'data':x, 'seg':y})
-        else:
-            output = None
-        
-        data_dict = {"subject": subject,
-                     "data": output['data'] if output else x,  # (nr_slices, channels, x, y, [z])
-                     "seg": output['seg'] if output else y, # (nr_slices, channels, x, y, [z])
-                     "slice_dir": slice_direction}  
+            # Apply transformations
+            if self.transform:
+                output = self.transform(**{'data':x, 'seg':y})
+            else:
+                output = {'data':x, 'seg':y}
+
+            
+            data_dict = {"subject": subject,
+                        "data": output['data'].squeeze(0),  # (channels, x, y, [z])
+                        "seg": output['seg'].squeeze(0), # (channels, x, y, [z])
+                        }  
 
         return data_dict
 
