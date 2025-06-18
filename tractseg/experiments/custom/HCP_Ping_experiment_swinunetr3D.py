@@ -9,11 +9,11 @@ from tractseg.experiments.base import Config as BaseConfig
 class Config(BaseConfig):
     EXP_NAME = os.path.basename(__file__).split(".")[0] # filename becomes experiment name
 
-    DATASET = "HCP"  # HCP (105) | HCP_all (1061) | HCP_vis
+    DATASET = ["HCP_all","Ping"]  # HCP (105) | HCP_all (1061) | HCP_vis
     DATA_PATH= "/pscratch/sd/j/junbeom/"
-    DATASET_FOLDER = "HCP_preproc_brainlife_fixed" # "HCP_for_training"
-    FEATURES_FILENAME = "aligned_peaks"  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
-    LABELS_FILENAME = "aligned_corrected_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
+    DATASET_FOLDER = ["HCP_preproc_brainlife_fixed","Ping_preproc_brainlife_fixed"]# "HCP_for_training"
+    FEATURES_FILENAME = ["aligned_peaks","aligned_peaks"]  # "12g90g270g_CSD_BX" # filename of nifti file (*.nii.gz) without file ending; mrtrix CSD peaks; shape: [x,y,z,9]; one file for each subject
+    LABELS_FILENAME = ["aligned_corrected_bundle_masks", "corrected_bundle_masks"] # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
     NR_SLICES = 1
     BATCH_SIZE = 2 # 128 | 47 : number of slices per batch
@@ -41,14 +41,16 @@ class Config(BaseConfig):
     FP16 = True # True 시 validation 시에 index error 발생
     NUM_EPOCHS = 250
     LEARNING_RATE = 0.001
-    LR_SCHEDULE = True 
+    LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
 
     LOG_PER_BUNDLE = True
-    DATA_AUGMENTATION = False
+    DATA_AUGMENTATION = True
     
-    NUM_PROCESSES = 2
+    NUM_PROCESSES = 4
     LR_SCHEDULE_TYPE = "CosineAnnealingLR"
     #GRADIENT_CLIP = 1
+
+    SAMPLE_N_SUBJECTS = 1057
     

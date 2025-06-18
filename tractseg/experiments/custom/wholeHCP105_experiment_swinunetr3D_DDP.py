@@ -16,7 +16,7 @@ class Config(BaseConfig):
     LABELS_FILENAME = "aligned_corrected_bundle_masks" # if not set, predefined LABELS_FILENAME is used.
     NR_OF_CLASSES = 61 # number of output channel
     NR_SLICES = 1
-    BATCH_SIZE = 2 # 128 | 47 : number of slices per batch
+    BATCH_SIZE = 1 # 128 | 47 : number of slices per batch
     VAL_BATCH_SIZE = 2
     COMPILE = True
     CLASSES = "Brainlife"
@@ -40,15 +40,16 @@ class Config(BaseConfig):
     USE_DROPOUT = False
     FP16 = True # True 시 validation 시에 index error 발생
     NUM_EPOCHS = 250
-    LEARNING_RATE = 0.001
-    LR_SCHEDULE = True 
+    LEARNING_RATE = 0.0001
+    LR_SCHEDULE = True
     LR_SCHEDULE_MODE = "min"  # min | max
     LOSS_FUNCTION = "default" # default | soft_batch_dice
+    LR_WARMUP_RATIO = 0.1
 
     LOG_PER_BUNDLE = True
-    DATA_AUGMENTATION = False
+    DATA_AUGMENTATION = True
     
-    NUM_PROCESSES = 2
+    NUM_PROCESSES = 8
     LR_SCHEDULE_TYPE = "CosineAnnealingLR"
     #GRADIENT_CLIP = 1
     
