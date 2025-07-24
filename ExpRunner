@@ -44,7 +44,7 @@ from tractseg.models.base_model import BaseModel
 import neptune
 from neptune.utils import stringify_unsupported
 
-from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
+#from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 
 
 #DDP
@@ -85,6 +85,7 @@ def main():
     parser.add_argument("--use_torch_dataloader", action="store_true", help="use new torch dataloader")
 
     # training-related arguments
+    parser.add_argument("--feature_size", type=int, default=None, help="feature size of the model")
     parser.add_argument("--learning_rate", type=float, default=None, help="Learning rate")
     parser.add_argument("--optimizer", type=str, default=None, help="optimizer")
     parser.add_argument("--batch_size", type=int, default=None, help="Batch size")
@@ -176,6 +177,8 @@ def main():
     else:
         Config.distributed = False
     
+    if args.feature_size:
+        Config.FEATURE_SIZE = args.feature_size
     if args.batch_size:
         Config.BATCH_SIZE = args.batch_size
     if args.nr_slices:

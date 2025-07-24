@@ -24,7 +24,7 @@ from tractseg.data.data_loader_training import DataLoaderTraining as DataLoaderT
 from tractseg.data.data_loader_training_3D import DataLoaderTraining as DataLoaderTraining3D
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 
-from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
+#from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 import torch
 
 # new
@@ -410,33 +410,14 @@ def predict_img(Config, model, data_loader, probs=False, scale_to_world_shape=Tr
     for batch in tqdm(batch_generator):
         x = batch["data"]   # (bs, nr_channels, x, y, (z))
         y = batch["seg"]    # (bs, nr_classes, x, y, (z))
-        
+        y = y.numpy()
 
-        if Config.MODEL == "MASAM" and Config.DIM == "3D":
-            #bs, features, w, h, d = y.shape
-            # consistently choose the first spatial dimension for slices.
-            if Config.SAM_SLICE_DIRECTION == "x":
-                x = x.permute(0, 2, 1, 3, 4) # (bs, nr_of_channels, x, y, z) -> (bs, x, nr_of_channels, y, z)
-                #y = y.permute(0, 2, 1, 3, 4) # (bs, nr_classes, x, y, z) -> (bs, x, nr_classes, y, z)
-                #y = y.contiguous().view(-1, features, h, d)
-            elif Config.SAM_SLICE_DIRECTION == "y":
-                x = x.permute(0, 3, 1, 2, 4) # (bs, nr_of_channels, x, y, z) -> (bs, y, nr_of_channels, x, z)
-                #y = y.permute(0, 3, 1, 2, 4) # (bs, nr_classes, x, y, z) -> (bs, y, nr_classes, x, z)
-                #y = y.contiguous().view(-1, features, w, d)
-            elif Config.SAM_SLICE_DIRECTION == "z":
-                x = X.permute(0, 4, 1, 2, 3) # (bs, nr_of_channels, x, y, z) -> (bs, z, nr_of_channels, x, y)
-                #y = y.permute(0, 4, 1, 2, 3) # (bs, nr_classes, x, y, z) -> (bs, z, nr_classes, x, y)
-                #y = y.contiguous().view(-1, features, w, h) # (bs*z, nr_classes, x, y)
-            y = y.numpy()
-        
-        elif not only_prediction:
+        if not only_prediction:
             y = y.astype(Config.LABELS_TYPE)
             if Config.DIM == "2D":
                 y = y.transpose(0, 2, 3, 1) # (bs, x, y, nr_classes)
             else:
                 y = y.transpose(0, 2, 3, 4, 1) # (bs, x, y, z, nr_classes)
-        
-        
 
         if Config.DROPOUT_SAMPLING:
             # For Dropout Sampling (must set deterministic=False in model)
@@ -485,7 +466,7 @@ def test_whole_subject(Config, model, run, subjects, type):
     }
 
     metrics_bundles = defaultdict(lambda: [0])
-
+    f1_scores = []
     for subject in subjects:
         print("{} subject {}".format(type, subject))
         start_time = time.time()
@@ -496,27 +477,15 @@ def test_whole_subject(Config, model, run, subjects, type):
         # img_probs = DirectionMerger.mean_fusion(Config.THRESHOLD, img_probs_xyz, probs=True)
 
         print("Took {}s".format(round(time.time() - start_time, 2)))
-
-        # if Config.EXPERIMENT_TYPE == "peak_regression":
-        #     f1 = metric_utils.calc_peak_length_dice(Config.CLASSES, img_probs, img_y,
-        #                                             max_angle_error=Config.PEAK_DICE_THR,
-        #                                             max_length_error=Config.PEAK_DICE_LEN_THR)
-        #     peak_f1_mean = np.array([s for s in f1.values()]).mean()  # if f1 for multiple bundles
-        #     metrics = metric_utils.calculate_metrics(metrics, None, None, 0, f1=peak_f1_mean,
-        #                                              type=type, threshold=Config.THRESHOLD)
-        #     metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, None, None,
-        #                                                                  dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
-        #                                                                  f1, threshold=Config.THRESHOLD)
-        # else:
-        print('img_probs.shape',img_probs.shape)
-        print('img_y.shape', img_y.shape)
         img_probs = np.reshape(img_probs, (-1, img_probs.shape[-1]))  # Flatten all dims except nr_classes dim
         img_y = np.reshape(img_y, (-1, img_y.shape[-1]))
-        metrics = metric_utils.calculate_metrics(metrics, img_y, img_probs, 0,
-                                                    type=type, threshold=Config.THRESHOLD)
+        metrics, subj_f1_score = metric_utils.calculate_metrics(metrics, img_y, img_probs, 0,
+                                                    type=type, threshold=Config.THRESHOLD, return_subj_f1=True)
+        f1_scores.append(subj_f1_score)
         metrics_bundles = metric_utils.calculate_metrics_each_bundle(metrics_bundles, img_y, img_probs,
                                                                         dataset_specific_utils.get_bundle_names(Config.CLASSES)[1:],
                                                                          threshold=Config.THRESHOLD)
+        
 
     metrics = metric_utils.normalize_last_element(metrics, len(subjects), type=type)
     metrics_bundles = metric_utils.normalize_last_element_general(metrics_bundles, len(subjects))
@@ -538,5 +507,6 @@ def test_whole_subject(Config, model, run, subjects, type):
             f.write("\n\nWeights: {}\n".format(Config.WEIGHTS_PATH))
             f.write("type: {}\n\n".format(type))
             pprint(metrics_bundles, f)
-        pickle.dump(metrics, open(join(Config.EXP_PATH, "score_" + type + ".pkl"), "wb"))
+        pickle.dump(metrics, open(join(Config.EXP_PATH, "score_" + type + str(Config.CV_FOLD)+ ".pkl"), "wb"))
+        pickle.dump(f1_scores, open(join(Config.EXP_PATH, "subj_f1_scores_" + type + str(Config.CV_FOLD) + ".pkl"), "wb"))
     return metrics

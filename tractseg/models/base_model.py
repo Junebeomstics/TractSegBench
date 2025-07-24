@@ -38,12 +38,11 @@ from torch.optim.lr_scheduler import LambdaLR
 from collections import defaultdict
 
 # Latent diffusion models
-from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
+#from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 
 # MA-SAM
 from segment_anything import sam_model_registry
 from sam_fact_tt_image_encoder import Fact_tt_Sam
-from importlib import import_module
 
 # MEDNEXT v1
 from mednext.nnunet_mednext import create_mednext_v1
@@ -133,7 +132,7 @@ class BaseModel:
                                                                 num_classes=self.Config.NR_OF_CLASSES-1,
                                                                 checkpoint=self.Config.WEIGHTS_PATH if (not self.Config.RESUME_TRAINING) and (self.Config.LOAD_WEIGHTS) and (self.Config.WEIGHTS_PATH.endswith('.pth')) else None, in_chans=9, pixel_mean=[0., 0., 0.],
                                                                 pixel_std=[1., 1., 1.])
-            pkg = import_module(self.Config.module)
+            pkg = importlib.import_module(self.Config.module)
             self.net = pkg.Fact_tt_Sam(sam, self.Config.rank, s=self.Config.scale)
 
             if self.Config.WEIGHTS_PATH.endswith('.pth'):
@@ -145,6 +144,7 @@ class BaseModel:
         else:
             NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
                                    self.Config.MODEL)
+            print('NR_OF_GRADIENTS', NR_OF_GRADIENTS)
             self.net = NetworkClass(n_input_channels=NR_OF_GRADIENTS, n_classes=self.Config.NR_OF_CLASSES,
                                     n_filt=self.Config.UNET_NR_FILT, batchnorm=self.Config.BATCH_NORM,
                                     dropout=self.Config.USE_DROPOUT, upsample=self.Config.UPSAMPLE_TYPE, deep_supervision = self.Config.DEEP_SUPERVISION)
@@ -493,6 +493,23 @@ class BaseModel:
     def predict(self, X):
         X = torch.tensor(X, dtype=torch.float32).contiguous().to(self.device)
 
+        if self.Config.MODEL == "MASAM" and self.Config.DIM == "3D":
+            #bs, features, w, h, d = y.shape
+            # consistently choose the first spatial dimension for slices.
+            if self.Config.SAM_SLICE_DIRECTION == "x":
+                X = X.permute(0, 2, 1, 3, 4) # (bs, nr_of_channels, x, y, z) -> (bs, x, nr_of_channels, y, z)
+                #y = y.permute(0, 2, 1, 3, 4) # (bs, nr_classes, x, y, z) -> (bs, x, nr_classes, y, z)
+                #y = y.contiguous().view(-1, features, h, d)
+            elif self.Config.SAM_SLICE_DIRECTION == "y":
+                X = X.permute(0, 3, 1, 2, 4) # (bs, nr_of_channels, x, y, z) -> (bs, y, nr_of_channels, x, z)
+                #y = y.permute(0, 3, 1, 2, 4) # (bs, nr_classes, x, y, z) -> (bs, y, nr_classes, x, z)
+                #y = y.contiguous().view(-1, features, w, d)
+            elif self.Config.SAM_SLICE_DIRECTION == "z":
+                X = X.permute(0, 4, 1, 2, 3) # (bs, nr_of_channels, x, y, z) -> (bs, z, nr_of_channels, x, y)
+                #y = y.permute(0, 4, 1, 2, 3) # (bs, nr_classes, x, y, z) -> (bs, z, nr_classes, x, y)
+                #y = y.contiguous().view(-1, features, w, h) # (bs*z, nr_classes, x, y)
+            
+
         if self.Config.DROPOUT_SAMPLING:
             self.net.train()
         else:
@@ -500,23 +517,25 @@ class BaseModel:
             
         with torch.no_grad():
             if self.Config.MODEL == 'MASAM':
+                #print('X prior to net:',X.shape) # 	torch.Size([1, 144, 9, 144, 144])
                 outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1])
                 outputs = outputs['low_res_logits']
+                #print('outputs after net:', outputs.shape) 	torch.Size([144, 61, 144, 144])
             else:
                 outputs = self.net(X)  # forward
         probs = F.sigmoid(outputs).detach().cpu().numpy()
 
-        if self.Config.DIM == "2D":
-            probs = probs.transpose(0, 2, 3, 1)  # (bs, x, y, classes)
-        else:
-            if self.Config.MODEL == 'MASAM':
-                # MASAM 3D has no batch dimension since it has batch size of 1,
-                if self.Config.SAM_SLICE_DIRECTION == "x":
-                    probs = probs.transpose(2,3,0,1) # (x, classes, y, z) -> (x, y, z, classes)
-                elif self.Config.SAM_SLICE_DIRECTION == "y":
-                    probs = probs.transpose(2,0,3,1) # (y, classes, x, z) -> (x, y, z, classes)
-                elif self.Config.SAM_SLICE_DIRECTION == "z":
-                    probs = probs.transpose(2,3,0,1) # (z, classes, x, y) -> (x, y, z, classes)
+        if self.Config.MODEL == 'MASAM':
+            # MASAM 3D has no batch dimension since it has batch size of 1,
+            if self.Config.SAM_SLICE_DIRECTION == "x":
+                probs = probs.transpose(0,2,3,1) # (x, classes, y, z) -> (x, y, z, classes)
+            elif self.Config.SAM_SLICE_DIRECTION == "y":
+                probs = probs.transpose(2,3,0,1) # (y, classes, x, z) -> (x, y, z, classes)
+            elif self.Config.SAM_SLICE_DIRECTION == "z":
+                probs = probs.transpose(2,3,0,1) # (z, classes, x, y) -> (x, y, z, classes)
+        else:   
+            if self.Config.DIM == "2D":
+                probs = probs.transpose(0, 2, 3, 1)  # (bs, x, y, classes)
             else:
                 probs = probs.transpose(0, 2, 3, 4, 1)  # (bs, x, y, z, classes)
         return probs

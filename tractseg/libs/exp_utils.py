@@ -44,7 +44,7 @@ def create_experiment_folder(Config):
         if os.path.exists(dir):
             return dir
         else:
-            os.makedirs(dir)
+            os.makedirs(dir, exist_ok=True)
             return dir
     else: # Training from scratch
         for i in range(100):

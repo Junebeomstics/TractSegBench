@@ -134,7 +134,12 @@ class MRISliceDataset(Dataset):
 
     def load_subject_data(self, subject): # originally, load_training_data
         def load(filepath):
-            return nib.load(filepath + ".nii.gz").get_fdata()
+            if os.path.exists(filepath + ".npy"):
+                # Load nifti file and return data
+                # print("Loading data from: {}".format(filepath + ".nii.gz"))
+                return np.load(filepath + ".npy")
+            elif os.path.exists(filepath + ".nii.gz"):
+                return nib.load(filepath + ".nii.gz").get_fdata()
 
         data = load(join(self.config.DATA_PATH, self.config.DATASET_FOLDER, subject, self.config.FEATURES_FILENAME))
         

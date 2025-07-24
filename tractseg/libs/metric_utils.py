@@ -118,7 +118,7 @@ def add_empty_element(metrics):
     return metrics
 
 
-def calculate_metrics(metrics, y, class_probs, loss, f1=None, f1_per_bundle=None, type="train", threshold=0.5):
+def calculate_metrics(metrics, y, class_probs, loss, f1=None, f1_per_bundle=None, type="train", threshold=0.5, return_subj_f1=False):
     """
     Add metrics to metric dict.
 
@@ -131,6 +131,7 @@ def calculate_metrics(metrics, y, class_probs, loss, f1=None, f1_per_bundle=None
         f1_per_bundle:
         type:
         threshold:
+        if_return_subj_f1: if True, return f1 per subject in metrics["f1_per_subject_" + type]
 
     Returns:
         updated metric dict
@@ -149,8 +150,10 @@ def calculate_metrics(metrics, y, class_probs, loss, f1=None, f1_per_bundle=None
                 if "f1_" + key + "_" + type not in metrics:
                     metrics["f1_" + key + "_" + type] = [0]
                 metrics["f1_" + key + "_" + type][-1] += f1_per_bundle[key]
-
-    return metrics
+    if not return_subj_f1:
+        return metrics
+    else:
+        return metrics, my_f1_score_macro(y, pred_class)
 
 def calculate_metrics_for_ddp(Config, model, predictions, labels, device):
     """

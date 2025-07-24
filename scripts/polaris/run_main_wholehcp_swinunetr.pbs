@@ -11,5 +11,23 @@ module use /soft/modulefiles; module load conda; conda activate masam
 
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
-./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg
+# no gradient clipping, feature size = 192, fold 0, continue training
+#CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr_x20 --train True --test True --seg --feature_size 192 --rt --with_id TRAC-1425 & # &
+# sleep 20
+# test for gradient clipping = 1
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg --feature_size 192 --gradient_clip 1 &
+# sleep 20
+# no gradient clipping, feature size = 192
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg --feature_size 48 & 
+sleep 20
+# no gradient clipping, feature size = 192
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr --en run_with_wholeHCP_swinunetr --train True --test True --seg --feature_size 48 & 
+sleep 20
+
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
+
+# wholeHCP105 experiment with swinunetr
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr  --train True --test True --feature_size 48 & #--rt --with_id TRAC-444
+sleep 20
+CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP105_experiment_swinunetr --en run_with_wholeHCP105_swinunetr --train True --test True --feature_size 48 & #--rt --with_id TRAC-444
+wait

@@ -32,9 +32,39 @@ export NUMEXPR_NUM_THREADS=1
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
 
 # from HCP+CAMCAN+PING
-CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_MASAM3D_x8/best_weights_ep29.npz & # --seg --rt --with_id TRAC-469
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_MASAM3D_x8/best_weights_ep29.npz & # --seg --rt --with_id TRAC-469
+# sleep 20
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_MASAM3D_x9/best_weights_ep25.npz  &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/HCP_CamCan_Ping_experiment_MASAM3D_x10/best_weights_ep20.npz &
+# wait
+
+# from HCP all
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x22/best_weights_ep28.npz &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x1/best_weights_ep27.npz  &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x23/best_weights_ep37.npz &
+# wait
+
+#from HCP+PING (running)
+
+# MASAM3D from PING
+
+# HCP TractSeg3D inference
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg3D --en CamCan_experiment_TractSeg3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg3D_x15/best_weights_ep19.npz  &
 sleep 20
-# 
+# HCP TractSeg2D inference
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x15/best_weights_ep52.npz  & # --seg --rt --with_id TRAC-469
+wait
+
+# from HCP+PING
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x22/best_weights_ep28.npz &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x1/best_weights_ep27.npz  &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_wholeHCP_MASAM3D_x23/best_weights_ep37.npz &
+# wait
+
 # CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_MASAM3D_x1 --en CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP105_experiment_mednext3D_x22/best_weights_ep191.npz  & # --seg --rt --with_id TRAC-469
 # sleep 20
-wait

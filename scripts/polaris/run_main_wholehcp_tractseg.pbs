@@ -7,10 +7,38 @@
 #PBS -q preemptable
 #PBS -j oe
 
-module use /soft/modulefiles; module load conda; conda activate masam
-
+#module use /soft/modulefiles; module load conda; conda activate masam
+module use /soft/modulefiles; module load conda; source  /grand/NeuroX/junbeom/TractSegVis/venvs/bin/activate
 cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 
+# whole HCP experiment t1 & FA
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_t1 --en wholeHCP_experiment_TractSeg_t1 --train True --test True --seg &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_fa --en wholeHCP_experiment_TractSeg_fa --train True --test True --seg &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_t1 --en wholeHCP_experiment_TractSeg_t1 --train True --test True --seg &
+# sleep 20
+# CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_fa --en wholeHCP_experiment_TractSeg_fa --train True --test True --seg &
+# wait
 
-./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg --en wholeHCP_experiment_TractSeg --train True --test True --seg 
-#./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True
+# CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_t1 --en wholeHCP_experiment_TractSeg_t1 --train True --test True --seg &
+# sleep 20
+
+# CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_fa --en wholeHCP_experiment_TractSeg_fa --train True --test True --seg &
+# sleep 20
+
+# CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg_t1 --en wholeHCP_experiment_TractSeg_t1 --train True --test True --seg &
+# wait
+# sleep 20
+
+
+# whole HCP experiment with swinunetr
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr_fa --en wholeHCP_experiment_swinunetr_fa --train True --test True --seg &
+sleep 20
+CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr_t1 --en wholeHCP_experiment_swinunetr_t1 --train True --test True --seg &
+sleep 20
+CUDA_VISIBLE_DEVICES=2 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr_fa --en wholeHCP_experiment_swinunetr_fa --train True --test True --seg &
+sleep 20
+CUDA_VISIBLE_DEVICES=3 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_swinunetr_t1 --en wholeHCP_experiment_swinunetr_t1 --train True --test True --seg &
+wait
+

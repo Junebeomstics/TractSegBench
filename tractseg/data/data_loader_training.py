@@ -58,8 +58,11 @@ def load_training_data(Config, subject):
         data and labels as 3D array
     """
     def load(filepath):
+        #if os.path.exists(filepath + ".npy"):
+            # Load numpy file
+            # data = np.load(filepath + ".npy", mmap_mode="r") # , mmap_mode="r"
+        # if os.path.exists(filepath + ".nii.gz"):
         data = nib.load(filepath + ".nii.gz").get_fdata()
-        # data = np.load(filepath + ".npy", mmap_mode="r")
         return data
     
     
@@ -250,6 +253,9 @@ class BatchGenerator2D_Nifti_random(SlimDataLoaderBase):
         # Convert peaks to tensors if tensor model
         if self.Config.NR_OF_GRADIENTS == 18*self.Config.NR_SLICES:
             data = peak_utils.peaks_to_tensors(data)
+
+        if len(data.shape) == 3:  # if data is 3D, add channel dimension
+            data = np.expand_dims(data, axis=3)  # (batch_size, x, y, z, channels)
 
         slice_direction = data_utils.slice_dir_to_int(self.Config.TRAINING_SLICE_DIRECTION) # if xyz, randomly choose one (1/3 per direction)
         #if data.shape[slice_direction] <= self.batch_size:
