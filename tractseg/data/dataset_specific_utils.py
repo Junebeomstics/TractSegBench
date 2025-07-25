@@ -540,6 +540,16 @@ def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):
                                                [146, 174, 146, img4d.shape[3]],
                                                pad_value=0)[1:, :, 1:, :]  # (145, 174, 145, none)
                                                #pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
+        elif "Ping" in dataset:  # (144,144,144)
+            if img4d.shape[0] == 160: # SwinUNETR
+                return img_utils.pad_4d_image_left(img4d, np.array([0, 7, 0, 0]),
+                                               [160, 174, 160, img4d.shape[3]],
+                                               pad_value=0)[8:154, :, 8:154, :] 
+            # no resize needed
+            return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
+                                               [146, 174, 146, img4d.shape[3]],
+                                               pad_value=0)[1:, :, 1:, :]  # (145, 174, 145, none)
+                                               #pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
         elif dataset == "TRACED":  # (78,93,75)
             raise ValueError("resolution '1.25mm' not supported for dataset 'TRACED'")
         elif dataset == "Schizo":  # (144,144,144)

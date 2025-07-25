@@ -24,7 +24,7 @@ class Config(BaseConfig):
     MODEL = "SwinUNETR"
     INPUT_DIM = (160,160,160)
     DIM = "3D"  # 2D | 3D
-    FEATURE_SIZE = 48
+    FEATURE_SIZE = 24
     SLICE_DIRECTION = "y"  # x | y | z  ("combined" needs z)
     TRAINING_SLICE_DIRECTION = "xyz"  # y | xyz
     TYPE = "single_direction"  
