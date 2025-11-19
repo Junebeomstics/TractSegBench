@@ -23,6 +23,9 @@ try:
 except ImportError:
     APEX_AVAILABLE = False
     pass
+
+# Use PyTorch native AMP so fp16 also works without Apex.
+PYTORCH_AMP_AVAILABLE = True
 from torch.cuda.amp import autocast, GradScaler
 from tractseg.libs import pytorch_utils
 from tractseg.libs import exp_utils
@@ -173,16 +176,15 @@ class BaseModel:
         else:
             raise ValueError("Optimizer not defined")
 
-        if APEX_AVAILABLE and self.Config.FP16:
-            # Use O0 to disable fp16 (might be a little faster on TitanX)
-            # self.net, self.optimizer = amp.initialize(self.net, self.optimizer, verbosity=0, opt_level="O1")
+        if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
+            # Use PyTorch native AMP instead of Apex
             if not inference:
-                print("INFO: Using fp16 training")
+                print("INFO: Using PyTorch native fp16 training")
         else:
             if not inference:
-                print("INFO: Did not find APEX, defaulting to fp32 training")
+                print("INFO: Did not find AMP support, defaulting to fp32 training")
 
-        if APEX_AVAILABLE and self.Config.FP16:
+        if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
             self.scaler = GradScaler()
 
         if self.Config.LR_SCHEDULE:
@@ -223,8 +225,8 @@ class BaseModel:
         #     self.net.conv_5 = nn.Conv2d(self.Config.UNET_NR_FILT, self.Config.NR_OF_CLASSES, kernel_size=1,
         #                                 stride=1, padding=0, bias=True).to(self.device)
     def train(self, X, y, weight_factor=None, timesteps=None, type=None):
-        X = X.contiguous().cuda(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
-        y = y.contiguous().cuda(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
+        X = X.contiguous().to(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
+        y = y.contiguous().to(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
         metrics = {}
 
         if self.Config.DIM == "2D":
@@ -279,7 +281,7 @@ class BaseModel:
             self.net.train(False)
         self.optimizer.zero_grad() 
         if type == 'train':
-            if APEX_AVAILABLE and self.Config.FP16:
+            if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
                 with autocast():
                     if self.Config.MODEL == 'LatentDiffusionModel':
                         outputs = self.net(X, timesteps)
@@ -292,10 +294,10 @@ class BaseModel:
                     if weight_factor is not None:
                         if len(y.shape) == 4:  # 2D
                             weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
-                                                y.shape[2], y.shape[3])).cuda()
+                                                y.shape[2], y.shape[3])).to(self.device)
                         else:  # 3D
                             weights = torch.ones((self.Config.BATCH_SIZE, self.Config.NR_OF_CLASSES,
-                                                y.shape[2], y.shape[3], y.shape[4])).cuda()
+                                                y.shape[2], y.shape[3], y.shape[4])).to(self.device)
                         bundle_mask = y > 0
                         weights[bundle_mask.data] *= weight_factor  # 10
 
@@ -337,10 +339,10 @@ class BaseModel:
                 if weight_factor is not None:
                     if len(y.shape) == 4:  # 2D
                         weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
-                                            y.shape[2], y.shape[3])).cuda()
+                                            y.shape[2], y.shape[3])).to(self.device)
                     else:  # 3D
                         weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
-                                            y.shape[2], y.shape[3], y.shape[4])).cuda()
+                                            y.shape[2], y.shape[3], y.shape[4])).to(self.device)
                     bundle_mask = y > 0
                     weights[bundle_mask.data] *= weight_factor  # 10
 
@@ -375,10 +377,10 @@ class BaseModel:
             if weight_factor is not None:
                 if len(y.shape) == 4:  # 2D
                     weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
-                                        y.shape[2], y.shape[3])).cuda()
+                                        y.shape[2], y.shape[3])).to(self.device)
                 else:  # 3D
                     weights = torch.ones((self.Config.BATCH_SIZE * self.Config.NR_SLICES, self.Config.NR_OF_CLASSES,
-                                        y.shape[2], y.shape[3], y.shape[4])).cuda()
+                                        y.shape[2], y.shape[3], y.shape[4])).to(self.device)
                 bundle_mask = y > 0
                 weights[bundle_mask.data] *= weight_factor  
                 loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, y)

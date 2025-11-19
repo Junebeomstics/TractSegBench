@@ -7,10 +7,12 @@
 #PBS -q preemptable
 #PBS -j oe
 
-module use /soft/modulefiles; module load conda; source  /grand/NeuroX/junbeom/TractSegVis/venvs/bin/activate
+#module use /soft/modulefiles; module load conda; source  /grand/NeuroX/junbeom/TractSegVis/venvs/bin/activate
 
-cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
-
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+#cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
+cd /mnt/scratch/junb/TractSegVis/TractSeg
 
 # ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config wholeHCP_experiment_TractSeg --en wholeHCP_experiment_TractSeg --train True --test True --seg 
 #./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

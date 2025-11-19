@@ -354,7 +354,7 @@ def get_correct_input_dim(Config):
 
 def get_dwi_affine(dataset, resolution):
 
-    if ("HCP" in dataset or "CamCan" in dataset) and resolution == "1.25mm":
+    if ("HCP" in dataset or "CamCan" in dataset or "Ping" in dataset) and resolution == "1.25mm":
         # shape (145,174,145)
         return np.array([[-1.25, 0.,  0.,   90.],
                          [0., 1.25,   0.,  -126.],
@@ -524,17 +524,19 @@ def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):
             if img4d.shape[0] == 160: # SwinUNETR
                 return img_utils.pad_4d_image_left(img4d, np.array([0, 7, 0, 0]),
                                                [160, 174, 160, img4d.shape[3]],
-                                               pad_value=0)[8:154, :, 8:154, :] 
+                                               pad_value=0)[8:153, :, 8:153, :] # (145, 174, 145, none)
+            # pad 7 to left and right of y axis
             # no resize needed
             return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
                                                [146, 174, 146, img4d.shape[3]],
                                                pad_value=0)[1:, :, 1:, :]  # (145, 174, 145, none)
                                                #pad_value=0)[:-1, :, :-1, :]  # (145, 174, 145, none)
+
         elif "CamCan" in dataset:  # (144,144,144)
             if img4d.shape[0] == 160: # SwinUNETR
                 return img_utils.pad_4d_image_left(img4d, np.array([0, 7, 0, 0]),
                                                [160, 174, 160, img4d.shape[3]],
-                                               pad_value=0)[8:154, :, 8:154, :] 
+                                               pad_value=0)[8:153, :, 8:153, :]
             # no resize needed
             return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
                                                [146, 174, 146, img4d.shape[3]],
@@ -544,7 +546,7 @@ def scale_input_to_original_shape(img4d, dataset, resolution="1.25mm"):
             if img4d.shape[0] == 160: # SwinUNETR
                 return img_utils.pad_4d_image_left(img4d, np.array([0, 7, 0, 0]),
                                                [160, 174, 160, img4d.shape[3]],
-                                               pad_value=0)[8:154, :, 8:154, :] 
+                                               pad_value=0)[8:153, :, 8:153, :]
             # no resize needed
             return img_utils.pad_4d_image_left(img4d, np.array([1, 15, 1, 0]),
                                                [146, 174, 146, img4d.shape[3]],

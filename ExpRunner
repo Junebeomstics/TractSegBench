@@ -76,6 +76,7 @@ def main():
     parser.add_argument("--rt", action="store_true", help="Load pretrained checkpoints for continuing training")
     parser.add_argument("--only_val", action="store_true", help="only run validation")
     parser.add_argument("--en", metavar="name", help="Experiment name")
+    parser.add_argument("--exp_path", type=str, default=None, help="Experiment path")
     parser.add_argument("--fold", metavar="N", help="Which fold to train when doing CrossValidation", type=int)
     parser.add_argument("--verbose", action="store_true", help="Show more intermediate output", default=True)
 
@@ -139,6 +140,8 @@ def main():
         Config.EXP_NAME = args.en # update Config.EXP_NAME
     else:
         Config.EXP_NAME = "default"
+    if args.exp_path:
+        Config.DEFAULT_EXP_PATH = args.exp_path # update Config.DEFAULT_EXP_PATH
     Config.TRAIN = bool(args.train) # True
     Config.TEST = bool(args.test) # True
     if args.seg:
@@ -318,7 +321,7 @@ def main():
             img_probs = direction_merger.mean_fusion(Config.THRESHOLD, img_probs, probs=True)
 
             img = nib.Nifti1Image(img_probs, dataset_specific_utils.get_dwi_affine(Config.DATASET, Config.RESOLUTION))
-            nib.save(img, join(Config.EXP_PATH, "probmaps", subject + "_peak.nii.gz"))
+            nib.save(img, join(Config.EXP_PATH, "probmaps", subject + "_segmentation.nii.gz"))
 
     # eval_script_path = join(os.path.expanduser("~"), "dev/bsp/eval_nonHCP.py")
     # if os.path.exists(eval_script_path) and not Config.ONLY_VAL and not Config.TEST:

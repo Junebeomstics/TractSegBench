@@ -107,7 +107,7 @@ def train_model(Config, model, run, scheduler=None):
         start_time = time.time()
 
         timings = defaultdict(lambda: 0) 
-        batch_nr = defaultdict(lambda: 0) # 매 epoch마다 초기화
+        batch_nr = defaultdict(lambda: 0) # Reset every epoch.
         weight_factor = _get_weights_for_this_epoch(Config, epoch_nr) # weight_factor = None
 
         if Config.distributed:
@@ -189,10 +189,10 @@ def train_model(Config, model, run, scheduler=None):
                 else:
                     nr_of_samples = len(getattr(Config, type.upper() + "_SUBJECTS"))
                     if type == "train":
-                        nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER) # 일반적인 1 epoch 세팅에 비해 2배 * 3배 = 6배 많은 iteration.
-                        #nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER) #<- 이게 올바른 형태 (Config.EPOCH_MULTIPLIER = 1)
+                        nr_batches = int(int(nr_of_samples / Config.NR_SLICES) * Config.EPOCH_MULTIPLIER) # More iterations than a standard one-epoch setup.
+                        #nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE) * Config.EPOCH_MULTIPLIER) # Correct form when Config.EPOCH_MULTIPLIER is 1.
                     else:
-                        nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE)) # 실제 sample 만큼의 숫자
+                        nr_batches = int(int(nr_of_samples / Config.BATCH_SIZE)) # Number of actual samples.
                 for i in range(nr_batches):  
                     if type == "train":
                         batch = next(batch_gen_train)
@@ -489,7 +489,7 @@ def test_whole_subject(Config, model, run, subjects, type):
 
     metrics = metric_utils.normalize_last_element(metrics, len(subjects), type=type)
     metrics_bundles = metric_utils.normalize_last_element_general(metrics_bundles, len(subjects))
-
+ 
     print("WHOLE SUBJECT:")
     pprint(metrics)
     for key,value in metrics.items():
