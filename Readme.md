@@ -33,7 +33,6 @@ The main workflow is:
 - `preprocessing/`: dataset-specific scripts for converting brainlife tract masks and peaks into training-ready files.
 - `scripts/polaris/`: legacy Polaris PBS examples for special cluster runs, not the default replication path.
 - `scripts/cortex/`: inference/evaluation orchestration and summary CSVs used in the current benchmark workflow.
-- `analyze_outputs/`: small utilities for TractSeg CLI baseline prediction and Dice calculation.
 - `resources/`: original TractSeg resources kept for compatibility, including the MNI FA template.
 
 The broader `/mnt/scratch/junb/TractSegVis` workspace also contains large data
@@ -81,9 +80,6 @@ directly for one-off commands:
 conda run -n masam_blackwell python -m pip install --no-build-isolation --no-deps -e .
 conda run -n masam_blackwell python tests/test_model_imports.py
 ```
-
-The older hand-written `envs/environment.yml` (`tractseg-benchmark`, CUDA 11.8)
-is kept as a lighter-weight fallback for hosts on an older CUDA toolchain.
 
 For workflows that need FSL or MRtrix, prefer Docker unless a cluster module is
 explicitly required:
@@ -296,13 +292,6 @@ The current inference matrices and cross-domain runs are represented by scripts
 under `scripts/cortex/inference/` and summary CSVs under
 `scripts/cortex/summary_csv/`.
 
-For the original TractSeg CLI baseline, use:
-
-```bash
-bash analyze_outputs/1.predict_bundle_masks_with_TractSeg_CLI.sh
-conda run -n masam_blackwell python analyze_outputs/2.concat_predicted_segmentations_and_calc_dice.py
-```
-
 ## Maintenance Plan
 
 The repo still contains upstream TractSeg compatibility code, benchmark code,
@@ -313,7 +302,7 @@ be staged so benchmark reproducibility is not broken.
 
 - Remove generated caches from version control: `__pycache__/`, `*.pyc`, and `.ipynb_checkpoints/`.
 - Remove tracked cluster output logs such as `R-*.out`.
-- Extend `.gitignore` for generated benchmark outputs, local Neptune metadata,
+- Extend `.gitignore` for generated benchmark outputs, local wandb run metadata,
   model checkpoints, and large local datasets.
 - Keep source scripts and configs unchanged in this phase.
 
