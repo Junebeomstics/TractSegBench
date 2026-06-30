@@ -16,7 +16,7 @@ from batchgenerators.transforms.noise_transforms import GaussianNoiseTransform
 from batchgenerators.transforms.spatial_transforms import SpatialTransform
 from batchgenerators.transforms.spatial_transforms import MirrorTransform
 from batchgenerators.transforms.sample_normalization_transforms import ZeroMeanUnitVarianceTransform
-from batchgenerators.transforms.utility_transforms import NumpyToTensor
+from tractseg.data.DLDABG_standalone import NumpyToTensor
 from batchgenerators.transforms.abstract_transforms import Compose
 from batchgenerators.dataloading.multi_threaded_augmenter import MultiThreadedAugmenter
 from batchgenerators.dataloading.data_loader import SlimDataLoaderBase
