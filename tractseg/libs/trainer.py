@@ -254,11 +254,9 @@ def train_model(Config, model, run):
 
         # Log metrics
         if run is not None and (not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0)):
-            for key,value in metrics.items():
-                run[key].log(metrics[key][-1])
-        
-            # Log learning rate
-            run['learning_rate'].log(model.optimizer.param_groups[0]['lr'])
+            log_dict = {key: metrics[key][-1] for key in metrics}
+            log_dict['learning_rate'] = model.optimizer.param_groups[0]['lr']
+            run.log(log_dict)
         print("  Epoch {}, Average Epoch loss = {}".format(epoch_nr, metrics["loss_train"][-1]))
         # exp_utils.print_and_save(Config.EXP_PATH, "  Epoch {}, nr_of_updates {}".format(epoch_nr, nr_of_updates))
 
@@ -450,13 +448,13 @@ def test_whole_subject(Config, model, run, subjects, type):
  
     print("WHOLE SUBJECT:")
     pprint(metrics)
-    for key,value in metrics.items():
-        run['whole_'+key].log(metrics[key][-1])
+    if run is not None:
+        run.log({'whole_' + key: metrics[key][-1] for key in metrics})
 
     print("WHOLE SUBJECT BUNDLES:")
     pprint(metrics_bundles)
-    for key, value in metrics_bundles.items():
-        run['whole_' + key].log(metrics_bundles[key][-1])
+    if run is not None:
+        run.log({'whole_' + key: metrics_bundles[key][-1] for key in metrics_bundles})
 
     # Only write files on rank 0 to avoid conflicts
     if not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0):

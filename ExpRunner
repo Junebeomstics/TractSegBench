@@ -41,8 +41,7 @@ from tractseg.data.data_loader_inference import DataLoaderInference
 from tractseg.data import dataset_specific_utils
 from tractseg.models.base_model import BaseModel
 
-import neptune
-from neptune.utils import stringify_unsupported
+import wandb
 
 #from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 
@@ -80,9 +79,9 @@ def main():
     parser.add_argument("--fold", metavar="N", help="Which fold to train when doing CrossValidation", type=int)
     parser.add_argument("--verbose", action="store_true", help="Show more intermediate output", default=True)
 
-    parser.add_argument("--with_id", type=str, default=None, help="Neptune run id")
+    parser.add_argument("--with_id", type=str, default=None, help="wandb run id to resume")
     parser.add_argument("--weights_path", type=str, default="", help="path to weights if not using path in Config")
-    parser.add_argument("--data_path", type=str, default=None, help="Neptune run id")
+    parser.add_argument("--data_path", type=str, default=None, help="Path to data (overrides Config.DATA_PATH)")
     parser.add_argument("--use_torch_dataloader", action="store_true", help="use new torch dataloader")
 
     # training-related arguments
@@ -110,24 +109,34 @@ def main():
     parser.add_argument("--use_ddp", action="store_true", help="whether to activate DistributedDataParallel")
     args = parser.parse_args()
 
+    # W&B initialization. Provide your token via the WANDB_API_KEY env var.
+    # Optionally set WANDB_PROJECT / WANDB_ENTITY to override the defaults.
+    if os.environ.get("WANDB_API_KEY") is None:
+        raise RuntimeError(
+            "WANDB_API_KEY environment variable is not set. "
+            "Export your Weights & Biases API key before running, "
+            "e.g. `export WANDB_API_KEY=...`."
+        )
+
+    def init_wandb_run():
+        return wandb.init(
+            project=os.environ.get("WANDB_PROJECT", "TractSegVis"),
+            entity=os.environ.get("WANDB_ENTITY"),
+            name=args.en,
+            id=args.with_id,
+            resume="allow" if args.with_id else None,
+        )
+
     # DDP initialization
     if args.use_ddp:
         args = init_distributed(args)
 
         if args.rank == 0:
-            run = neptune.init_run(
-                with_id=args.with_id,  # replace with your actual run id
-                project="kjb961013/TractSegVis",  # replace with your actual project path
-                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4ZWNlMzk4Ny1hOTVlLTRjMzgtOWI4ZS1hY2FkYTY4MzNhYzMifQ=="  # replace with your API token
-                )
+            run = init_wandb_run()
         else:
             run = None
     else:
-        run = neptune.init_run(
-                with_id=args.with_id,  # replace with your actual run id
-                project="kjb961013/TractSegVis",  # replace with your actual project path
-                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI4ZWNlMzk4Ny1hOTVlLTRjMzgtOWI4ZS1hY2FkYTY4MzNhYzMifQ=="  # replace with your API token
-                )
+        run = init_wandb_run()
 
     # Config in base.py
     Config = getattr(importlib.import_module("tractseg.experiments.base"), "Config")()
@@ -257,19 +266,15 @@ def main():
     #                    if not callable(getattr(Config, attr)) and not attr.startswith("__")}
     #     pprint(Config_dict, f)
 
-    # Save hyperparameters in neptune logger
+    # Save hyperparameters in the W&B logger
     Config_dict = {attr: getattr(Config, attr) for attr in dir(Config)
-                       if not callable(getattr(Config, attr)) and not attr.startswith("__")}  
-    Config_dict = {attr: stringify_unsupported(value) if type(value) in ['NoneType', tuple, list] else value for attr, value in Config_dict.items()}
-    if Config.distributed:
-        if Config.rank == 0:
-            run["parameters"] = Config_dict
-    else:
-        run["parameters"] = Config_dict
+                       if not callable(getattr(Config, attr)) and not attr.startswith("__")}
+    if run is not None:
+        run.config.update(Config_dict, allow_val_change=True)
     
     Config = exp_utils.get_correct_labels_type(Config)  # do after saving Hyperparameters as txt
 
-    # we do not need this, since we use neptune to log hyperparameters.
+    # we do not need this, since we use wandb to log hyperparameters.
     #pkl.dump(Config, open(join(Config.EXP_PATH, "Hyperparameters.pkl"), "wb"))
 
     # Define model
@@ -283,7 +288,6 @@ def main():
     if Config.TRAIN:
         print("Training...")
         trainer.train_model(Config, model, run)
-        # run["train/loss"].append(0.9 ** epoch) # <- why??, which means epoch here?
 
         # Have to load other weights, because after training it has the weights of the last epoch
         print("Loading best epoch: {}".format(Config.BEST_EPOCH))

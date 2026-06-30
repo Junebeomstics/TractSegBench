@@ -291,7 +291,6 @@ dependencies:
       - nbclient==0.10.4
       - nbconvert==7.17.0
       - nbformat==5.10.4
-      - neptune-client==1.14.0
       - nest-asyncio==1.6.0
       - networkx==3.4.2
       - nibabel==5.3.3

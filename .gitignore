@@ -13,7 +13,7 @@ dist/
 *.c
 *.so
 *.out
-.neptune
+wandb/
 not_used
 pretrained_weights
 .ipynb_checkpoints
