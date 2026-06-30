@@ -43,6 +43,3 @@ tractseg/experiments/UNet3D_and_TOMxyz/*
 .omc/
 .omx/
 .codex
-
-# tests.sh writes its scratch output here; the bundled sample data dir was removed
-examples/
