@@ -252,24 +252,6 @@ def train_model(Config, model, run):
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["validate"], type="validate")
         metrics = metric_utils.normalize_last_element(metrics, batch_nr["test"], type="test")
 
-        # gather metrics across all processes for validation results
-        # if Config.distributed:
-        #     # Make sure metrics are properly synchronized across processes
-        #     # First ensure all processes have finished their computations
-        #     torch.distributed.barrier()
-
-        #     # Synchronize metrics across processes if using distributed training
-        #     for key in metrics:
-        #         if isinstance(metrics[key][-1], (int, float, np.int32, np.int64, np.float32, np.float64)):
-        #             # Convert to tensor for all-reduce operation
-        #             tensor = torch.tensor(metrics[key][-1]).to(model.device)
-        #             torch.distributed.all_reduce(tensor, op=torch.distributed.ReduceOp.SUM)
-        #             # Average the metric across all processes
-        #             metrics[key][-1] = tensor.item() / torch.distributed.get_world_size()
-            
-        #     # Add another barrier to ensure all processes have updated metrics
-        #     torch.distributed.barrier()
-
         # Log metrics
         if run is not None and (not Config.distributed or (Config.distributed and torch.distributed.get_rank() == 0)):
             for key,value in metrics.items():
