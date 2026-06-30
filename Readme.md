@@ -43,13 +43,13 @@ output folders should not be committed into this code repository.
 ## Runtime Environment
 
 The recommended environment is `tsbench`, a faithful clone of the maintained
-local `masam_blackwell` environment (Python 3.10, CUDA 12.8 / Blackwell-class
-GPU build, pinned conda + pip packages). For a new checkout, create it and
+local `masam_blackwell` environment (Python 3.10, CUDA 12.8 GPU build, pinned
+conda + pip packages). For a new checkout, create it and
 install this repository in editable mode:
 
 ```bash
 # 1. Create the environment (conda toolchain + pinned pip packages, incl. the
-#    PyTorch cu128 wheels and the git-pinned MedSAM2 build).
+#    PyTorch cu128 wheels).
 conda env create -f envs/tsbench.yml
 
 # 2. Install staple separately: it ships a stale `SimpleITK==1.2.0` pin that the
@@ -66,12 +66,13 @@ conda run -n tsbench python tests/test_model_imports.py
 `conda env export --no-builds` and then patched so it actually replicates from a
 clean machine: the pip section carries `--extra-index-url`
 (`download.pytorch.org/whl/cu128`) for the `torch`/`torchvision`/`torchaudio`
-`+cu128` wheels, `--find-links` (`data.pyg.org`) for the prebuilt
-`torch-spline-conv` wheel, and a git+commit URL for `MedSAM2`. The conda
-toolchain (CUDA 12.8 stack) and pip packages are otherwise pinned to known-good
-versions. These pins target a CUDA 12.8 / Blackwell host; on other GPUs or CUDA
-versions, adjust the `cuda-*`, `libcu*`, and `torch*` pins (and the two index
-URLs) to match your driver before creating the env.
+`+cu128` wheels and `--find-links` (`data.pyg.org`) for the prebuilt
+`torch-spline-conv` wheel. The conda toolchain (CUDA 12.8 stack) and pip
+packages are otherwise pinned to known-good versions. These pins target a CUDA
+12.8 host (verified on an NVIDIA RTX 6000 Ada, compute capability 8.9; cu128 also
+covers Hopper/Blackwell-class GPUs with a compatible driver). On other GPUs or
+CUDA versions, adjust the `cuda-*`, `libcu*`, and `torch*` pins (and the two
+index URLs) to match your driver before creating the env.
 
 `masam_blackwell` remains the maintained source environment and can still be used
 directly for one-off commands:
@@ -82,7 +83,7 @@ conda run -n masam_blackwell python tests/test_model_imports.py
 ```
 
 The older hand-written `envs/environment.yml` (`tractseg-benchmark`, CUDA 11.8)
-is kept as a lighter-weight fallback for non-Blackwell hosts.
+is kept as a lighter-weight fallback for hosts on an older CUDA toolchain.
 
 For workflows that need FSL or MRtrix, prefer Docker unless a cluster module is
 explicitly required:

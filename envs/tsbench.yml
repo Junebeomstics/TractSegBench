@@ -275,7 +275,6 @@ dependencies:
       - mda-xdrlib==0.2.0
       - mdurl==0.1.2
       - medpy==0.5.2
-      - MedSAM2 @ git+https://github.com/bowang-lab/MedSAM2@332f30d420f1d1b08e2a79b3ae6a602458808383
       - mistune==3.2.0
       - mkl==2025.3.1
       - mkl-fft==2.1.2
