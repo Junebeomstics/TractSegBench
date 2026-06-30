@@ -76,7 +76,7 @@ dataloaders = {
 # -------------------------------
 # Speed comparison
 # -------------------------------
-print("\n📊 DataLoader 로딩 시간 비교 (10개 배치 기준):")
+print("\n📊 DataLoader loading time comparison (based on 10 batches):")
 for name, loader in dataloaders.items():
     elapsed = measure_loader_speed(loader)
-    print(f" - {name:12}: {elapsed:.4f}초")
+    print(f" - {name:12}: {elapsed:.4f}s")
