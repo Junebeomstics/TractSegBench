@@ -2,7 +2,7 @@ import random
 from typing import Tuple
 
 import torch
-from batchgenerators.augmentations.utils import get_range_val, mask_random_squares
+from tractseg.custom_batchgenerators.augmentations.utils import get_range_val, mask_random_squares
 
 
 def augment_rician_noise(data_sample, noise_variance=(0, 0.1)):

@@ -17,7 +17,7 @@ from builtins import range
 import numpy as np
 import random
 from skimage.transform import resize
-from batchgenerators.augmentations.utils import uniform
+from tractseg.custom_batchgenerators.augmentations.utils import uniform
 import torch
 
 import torch.nn.functional as F
