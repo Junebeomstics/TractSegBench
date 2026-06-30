@@ -6,6 +6,7 @@
 - `tests/`: regression and unit tests (`test_end_to_end.py`, `test_functions.py`) plus fixed reference data in `tests/reference_files/`.
 - `examples/`: sample inputs/outputs used by docs and test workflows.
 - `scripts/` and `preprocessing/`: cluster job scripts and dataset preparation utilities.
+- `tools/`: standalone, ad-hoc utility scripts not part of the installed CLI or cluster job scripts.
 - `resources/` and `tractseg/resources/`: packaged templates/models used at runtime.
 
 ## Build, Test, and Development Commands
