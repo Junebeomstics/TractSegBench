@@ -48,16 +48,30 @@ GPU build, pinned conda + pip packages). For a new checkout, create it and
 install this repository in editable mode:
 
 ```bash
+# 1. Create the environment (conda toolchain + pinned pip packages, incl. the
+#    PyTorch cu128 wheels and the git-pinned MedSAM2 build).
 conda env create -f envs/tsbench.yml
+
+# 2. Install staple separately: it ships a stale `SimpleITK==1.2.0` pin that the
+#    pip resolver cannot satisfy alongside the rest of the freeze, so --no-deps
+#    matches how masam_blackwell installed it.
+conda run -n tsbench pip install --no-deps staple==0.3.2
+
+# 3. Install this repository in editable mode and run the import smoke test.
 conda run -n tsbench python -m pip install --no-build-isolation --no-deps -e .
 conda run -n tsbench python tests/test_model_imports.py
 ```
 
 `envs/tsbench.yml` was generated from `masam_blackwell` with
-`conda env export --no-builds`, so the conda toolchain (CUDA 12.8 stack) and pip
-packages are pinned to known-good versions. The pins target a CUDA 12.8 /
-Blackwell host; on other GPUs or CUDA versions, adjust the `cuda-*`, `libcu*`,
-and `pytorch`/`nvidia` pins to match your driver before creating the env.
+`conda env export --no-builds` and then patched so it actually replicates from a
+clean machine: the pip section carries `--extra-index-url`
+(`download.pytorch.org/whl/cu128`) for the `torch`/`torchvision`/`torchaudio`
+`+cu128` wheels, `--find-links` (`data.pyg.org`) for the prebuilt
+`torch-spline-conv` wheel, and a git+commit URL for `MedSAM2`. The conda
+toolchain (CUDA 12.8 stack) and pip packages are otherwise pinned to known-good
+versions. These pins target a CUDA 12.8 / Blackwell host; on other GPUs or CUDA
+versions, adjust the `cuda-*`, `libcu*`, and `torch*` pins (and the two index
+URLs) to match your driver before creating the env.
 
 `masam_blackwell` remains the maintained source environment and can still be used
 directly for one-off commands:
