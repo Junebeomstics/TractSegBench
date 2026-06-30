@@ -31,16 +31,6 @@ from tractseg.data.custom_transformations import FlipVectorAxisTransform
 from tractseg.data.spatial_transform_peaks import SpatialTransformPeaks
 from tractseg.data.spatial_transform_custom import SpatialTransformCustom
 
-# pytorch implementation
-from tractseg.data.DLDABG_standalone import ZeroMeanUnitVarianceTransform_PyTorch
-from tractseg.custom_batchgenerators.transforms.spatial_transforms import SpatialTransform_PyTorch
-from tractseg.custom_batchgenerators.transforms.resample_transforms import SimulateLowResolutionTransform_PyTorch
-from tractseg.data.custom_transformations import ResampleTransformLegacy_PyTorch
-from tractseg.custom_batchgenerators.transforms.noise_transforms import GaussianBlurTransform_PyTorch
-from tractseg.custom_batchgenerators.transforms.noise_transforms import GaussianNoiseTransform_PyTorch
-from tractseg.custom_batchgenerators.transforms.spatial_transforms import MirrorTransform_PyTorch
-from tractseg.data.custom_transformations import FlipVectorAxisTransform_PyTorch
-
 class MRISliceDataset(Dataset):
     def __init__(self, config, subjects, transform=None):
         self.config = config
@@ -300,81 +290,3 @@ def transform_data(Config, type):
         
     tfs.append(NumpyToTensor(keys=["data", "seg"], cast_to="float"))
     return tfs
-
-# transform_data for torch  
-def augment_data(Config, batch, type):
-    # X should be (bs, slices, features, w, h)
-    # y should be (bs, slices, classes, w, h)
-    x = batch["data"]  # (bs, slices, nr_of_channels, x, y)
-    y = batch["seg"]  # (bs, slices, nr_of_classes, x, y)
-    if x.ndim == 5:
-        bs, slices, nr_of_channels, w, h = x.shape
-        x = x.reshape(bs * slices, nr_of_channels, w, h)
-        y = y.reshape(bs * slices, y.shape[-3], w, h)
-    batch["data"] = x
-    batch["seg"] = y
-
-    tfs=[]
-    if Config.NORMALIZE_DATA:
-        ZeroMeanUnitVarianceTransform_PyTorch(per_channel=Config.NORMALIZE_PER_CHANNEL)
-
-    if Config.DATA_AUGMENTATION:
-        if type == "train":
-            # patch_center_dist_from_border:
-            #   if 144/2=72 -> always exactly centered; otherwise a bit off center
-            #   (brain can get off image and will be cut then)
-            if Config.DAUG_SCALE:
-                if Config.INPUT_RESCALING:
-                    source_mm = 2  # for bb
-                    target_mm = float(Config.RESOLUTION[:-2])
-                    scale_factor = target_mm / source_mm
-                    scale = (scale_factor, scale_factor)
-                else:
-                    scale = (0.9, 1.5)
-
-                if Config.PAD_TO_SQUARE:
-                    patch_size = Config.INPUT_DIM
-                else:
-                    patch_size = None  # keeps dimensions of the data
-
-                # spatial transform automatically crops/pads to correct size
-                center_dist_from_border = int(Config.INPUT_DIM[0] / 2.) - 10  # (144,144) -> 62
-                tfs.append(SpatialTransform_PyTorch(patch_size,
-                                            patch_center_dist_from_border=center_dist_from_border,
-                                            do_elastic_deform=Config.DAUG_ELASTIC_DEFORM,
-                                            alpha=Config.DAUG_ALPHA, sigma=Config.DAUG_SIGMA,
-                                            do_rotation=Config.DAUG_ROTATE,
-                                            angle_x=Config.DAUG_ROTATE_ANGLE,
-                                            angle_y=Config.DAUG_ROTATE_ANGLE,
-                                            angle_z=Config.DAUG_ROTATE_ANGLE,
-                                            do_scale=True, scale=scale, border_mode_data='constant',
-                                            border_cval_data=0,
-                                            order_data=3,
-                                            border_mode_seg='constant', border_cval_seg=0,
-                                            order_seg=0, random_crop=True,
-                                            p_el_per_sample=Config.P_SAMP,
-                                            p_rot_per_sample=Config.P_SAMP,
-                                            p_scale_per_sample=Config.P_SAMP))
-
-            if Config.DAUG_RESAMPLE:
-                tfs.append(SimulateLowResolutionTransform_PyTorch(zoom_range=(0.5, 1), p_per_sample=0.2, per_channel=False))
-
-            if Config.DAUG_RESAMPLE_LEGACY:
-                tfs.append(ResampleTransformLegacy_PyTorch(zoom_range=(0.5, 1)))
-
-            if Config.DAUG_GAUSSIAN_BLUR:
-                tfs.append(GaussianBlurTransform_PyTorch(blur_sigma=Config.DAUG_BLUR_SIGMA,
-                                                 different_sigma_per_channel=False,
-                                                 p_per_sample=Config.P_SAMP))
-
-            if Config.DAUG_NOISE:
-                tfs.append(GaussianNoiseTransform_PyTorch(noise_variance=Config.DAUG_NOISE_VARIANCE,
-                                                  p_per_sample=Config.P_SAMP))
-
-            if Config.DAUG_MIRROR:
-                tfs.append(MirrorTransform_PyTorch())
-
-            if Config.DAUG_FLIP_PEAKS:
-                tfs.append(FlipVectorAxisTransform_PyTorch())
-    transforms = Compose(tfs)
-    return transforms(**batch)
