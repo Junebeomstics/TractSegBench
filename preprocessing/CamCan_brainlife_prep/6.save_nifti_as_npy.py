@@ -2,12 +2,12 @@ import os
 import nibabel as nib
 import numpy as np
 
-# 최상위 디렉토리 경로 설정
+# Set top-level directory path
 # root_dir = "/grand/NeuroX/junbeom/TractSegVis/HCP_preproc_brainlife_fixed"
 # root_dir = "/grand/NeuroX/junbeom/TractSegVis/Ping_preproc_brainlife_fixed"
 root_dir = "/grand/NeuroX/junbeom/TractSegVis/CamCan_preproc_brainlife_fixed"
 
-# 모든 subject 폴더 순회
+# Iterate over all subject folders
 for subject in sorted(os.listdir(root_dir)):
     subject_path = os.path.join(root_dir, subject)
     if not os.path.isdir(subject_path):
@@ -18,11 +18,11 @@ for subject in sorted(os.listdir(root_dir)):
             nii_path = os.path.join(subject_path, file)
             npy_path = os.path.join(subject_path, file.replace(".nii.gz", ".npy"))
 
-            # NIfTI 파일 로드 및 데이터 추출
+            # Load NIfTI file and extract data
             img = nib.load(nii_path)
-            data = img.get_fdata(dtype=np.float32)  # float32로 하면 메모리 절약됨
+            data = img.get_fdata(dtype=np.float32)  # Using float32 saves memory
 
-            # npy 파일로 저장
+            # Save as npy file
             if os.path.exists(npy_path):
                 print(f"Skipping {npy_path}, already exists.")
                 continue

@@ -113,7 +113,7 @@ sleep 20
 # ./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --exp_path $EXP_PATH --en HCP_CamCan_PING_to_CamCan_experiment_swinunetr_inference_x3 --train False --test False --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x6/best_weights_ep33.npz --probs & 
 # wait
 
-# #여기서부터 저장소 부족으로 중간에 끊김.
+# # From here on it was cut short due to insufficient storage.
 # # SwinUNETR2D from HCP all
 # ./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --exp_path $EXP_PATH --en HCP_to_CamCan_experiment_swinunetr_inference_x1 --train False --test False --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz --probs & 
 # sleep 20

@@ -20,26 +20,26 @@ base="/global/cfs/cdirs/m4673/junbeom/TractSegVis/HCP105_Zenodo_NewTrkFormat"
 
 for subject_folder in */ ; do
     
-    # 'tractmasks' 폴더 경로 정의
+    # Define the 'tractmasks' folder path
     tractmasks_folder="$base/${subject_folder}/tractmasks"
     
-    # 'tractmasks' 폴더가 없거나 파일 개수가 72개 미만인 경우에만 실행
+    # Only run if the 'tractmasks' folder doesn't exist or has fewer than 72 files
     if [ ! -d "${tractmasks_folder}" ] || [ $(find "${tractmasks_folder}" -type f | wc -l) -lt 72 ]; then
-        # 'tractmasks' 폴더 생성
+        # Create the 'tractmasks' folder
         mkdir -p "${tractmasks_folder}"
         
-        # 'tracts' 폴더 경로 정의
+        # Define the 'tracts' folder path
         tracts_folder="$base/${subject_folder}/tracts"
         
-        # 'tracts' 폴더 내의 모든 .trk 파일을 처리
+        # Process all .trk files in the 'tracts' folder
         for trk_file in "${tracts_folder}"/*.trk; do
-            # .trk 파일의 기본 이름 추출 (경로 및 확장자 제외)
+            # Extract the base name of the .trk file (without path and extension)
             base_name=$(basename "${trk_file}" .trk)
             
-            # 'tractmasks' 폴더 내의 출력 파일 이름 설정
+            # Set the output file name within the 'tractmasks' folder
             output_file="$base/${tractmasks_folder}/${base_name}.nii.gz"
             
-            # Python 스크립트를 사용하여 .trk 파일을 .nii.gz 파일로 변환
+            # Convert the .trk file to .nii.gz using the Python script
             python trk_2_binary.py "${trk_file}" "${output_file}" "${REFERENCE_FILE}"
         done
     fi

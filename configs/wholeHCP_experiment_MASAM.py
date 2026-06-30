@@ -43,7 +43,7 @@ class Config(BaseConfig):
    
     # slightly less overfitting (but max f1_validate maybe slightly worse (makes sense if less overfitting))
     USE_DROPOUT = False
-    FP16 = True # True 시 validation 시에 index error 발생
+    FP16 = True # Causes an index error during validation when True
     BATCH_SIZE = 1
     NR_SLICES = 47
     USE_CONSECUTIVE_SLICES = False

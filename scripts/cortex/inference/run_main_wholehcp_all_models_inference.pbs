@@ -110,7 +110,7 @@ wait
 
 # ./ExpRunner --fold 2 --data_path $DATA_PATH --config wholeHCP_experiment_mednext3D --en HCP_CamCan_PING_to_HCP_experiment_mednext3D_inference_x3  --train False --test False --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_mednext3D_x2/best_weights_ep14.npz --seg & 
 # wait
-# 여기까지는 --seg로 들어감.
+# Up to here goes in with --seg.
 
 
 # # From PING to HCP
@@ -119,7 +119,7 @@ wait
 # sleep 20
 # ./ExpRunner --fold 1 --data_path $DATA_PATH --config wholeHCP_experiment_TractSeg --en PING_to_HCP_experiment_TractSeg_inference_x2 --train False --test False --lw  --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg_x10/best_weights_ep105.npz --seg &
 # sleep 20
-# # 여기서부터 probs_map이 만들어지기 시작
+# # From here on, probs_map starts being generated
 # ./ExpRunner --fold 2 --data_path $DATA_PATH --config wholeHCP_experiment_TractSeg --en PING_to_HCP_experiment_TractSeg_inference_x3 --train False --test False --lw  --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg_x12/best_weights_ep193.npz --seg &
 # sleep 20
 
@@ -179,7 +179,7 @@ wait
 # ./ExpRunner --fold 1 --data_path $DATA_PATH --config wholeHCP_experiment_TractSeg3D --en CamCan_to_HCP_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz --seg &
 # sleep 20
 
-# # TractSeg3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+# # TractSeg3D fold1 and fold2 use the same exp_path as x6
 # ./ExpRunner --fold 2 --data_path $DATA_PATH --config wholeHCP_experiment_TractSeg3D --en CamCan_to_HCP_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz --seg &
 # wait
 
@@ -201,7 +201,7 @@ wait
 # sleep 20
 # ./ExpRunner --fold 2 --data_path $DATA_PATH --config wholeHCP_experiment_swinunetr3D --en CamCan_to_HCP_experiment_swinunetr3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr3D_x6/best_weights_ep13.npz --seg &
 # wait
-# SwinUNETR3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+# SwinUNETR3D fold1 and fold2 use the same exp_path as x6
 
 # # MASAM3D from CAMCAN
 # ./ExpRunner --fold 0 --data_path $DATA_PATH --config wholeHCP_experiment_MASAM3D_x1 --en CamCan_to_HCP_experiment_MASAM3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D/best_weights_ep45.npz --seg &

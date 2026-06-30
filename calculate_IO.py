@@ -41,7 +41,7 @@ class NIFTIDataset(Dataset):
         return data
 
 # -------------------------------
-# 측정 함수
+# Measurement function
 # -------------------------------
 def measure_loader_speed(dataloader, num_batches=10):
     batch_time = 0.0
@@ -56,14 +56,14 @@ def measure_loader_speed(dataloader, num_batches=10):
 
     return average_time
 # -------------------------------
-# 경로 설정
+# Path settings
 # -------------------------------
-# 예시: 파일 20개 사용
+# Example: use 20 files
 npy_files = [os.path.join('/grand/NeuroX/junbeom/TractSegVis/HCP_preproc_brainlife_fixed',subj,'aligned_corrected_bundle_masks.npy') for subj in os.listdir('/grand/NeuroX/junbeom/TractSegVis/HCP_preproc_brainlife_fixed')]  
 nii_files = [os.path.join('/grand/NeuroX/junbeom/TractSegVis/HCP_preproc_brainlife_fixed',subj,'aligned_corrected_bundle_masks.nii.gz') for subj in os.listdir('/grand/NeuroX/junbeom/TractSegVis/HCP_preproc_brainlife_fixed')]  
 
 # -------------------------------
-# DataLoader 설정
+# DataLoader settings
 # -------------------------------
 batch_size = 2
 
@@ -74,7 +74,7 @@ dataloaders = {
 }
 
 # -------------------------------
-# 속도 비교
+# Speed comparison
 # -------------------------------
 print("\n📊 DataLoader 로딩 시간 비교 (10개 배치 기준):")
 for name, loader in dataloaders.items():

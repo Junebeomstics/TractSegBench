@@ -35,7 +35,7 @@ cd /grand/NeuroX/junbeom/TractSegVis/TractSeg/
 # CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x1/best_weights_ep68.npz & # --seg --rt --with_id TRAC-469
 # sleep 20
 
-# # 밑에꺼는 학습 후 추가로 돌려야하는 세팅
+# # The settings below need to be run additionally after training
 # CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config CamCan_experiment_TractSeg --en CamCan_experiment_TractSeg --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz  & # --seg --rt --with_id TRAC-469
 # sleep 20
 # wait

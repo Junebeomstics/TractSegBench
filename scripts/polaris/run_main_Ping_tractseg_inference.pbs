@@ -71,7 +71,7 @@ sleep 20
 
 #CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 2 --data_path /grand/NeuroX/junbeom/TractSegVis --config Ping_experiment_TractSeg3D --en Ping_experiment_TractSeg3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz &
 #sleep 20
-# TractSeg3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+# TractSeg3D fold1 and fold2 use the same exp_path as x6
 
 # SwinUNETR2D from CAMCAN
 CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config Ping_experiment_swinunetr --en Ping_experiment_swinunetr --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_CamCan_swinunetr_x2/best_weights_ep205.npz &
@@ -88,7 +88,7 @@ CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/Tr
 sleep 20
 CUDA_VISIBLE_DEVICES=1 ./ExpRunner --fold 1 --data_path /grand/NeuroX/junbeom/TractSegVis --config Ping_experiment_swinunetr3D --en run_with_Ping_swinunetr3D --train False --test True --lw --weights_path /grand/NeuroX/junbeom/TractSegVis/TractSeg/hcp_exp/run_with_CamCan_swinunetr3D_x6/best_weights_ep13.npz &
 sleep 20
-# SwinUNETR3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+# SwinUNETR3D fold1 and fold2 use the same exp_path as x6
 
 
 

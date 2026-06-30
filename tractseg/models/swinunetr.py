@@ -460,25 +460,25 @@ class SwinUNETR(nn.Module):
         enc2 = self.encoder3(hidden_states_out[1])
         enc3 = self.encoder4(hidden_states_out[2])
         # Bottleneck
-        dec4 = self.encoder10(hidden_states_out[4]) # out_channels=16 * feature_size # encode_2까지
+        dec4 = self.encoder10(hidden_states_out[4]) # out_channels=16 * feature_size # up to encode_2
         
         
         # Level 5 (bottom level)
         dec3 = self.decoder5(dec4, hidden_states_out[3]) # upsample dec4  #out_channels=8 * feature_size 
 
         # Level 4
-        dec2 = self.decoder4(dec3, enc3) # upsample dec3 # out_channels=4 * feature_size # deconv1 + concat1 + expand_1_1+1_2 (decoder 5에는 1_2는 없음)
-        # output_2가 expand_2_1과 동일한 input을 받음
+        dec2 = self.decoder4(dec3, enc3) # upsample dec3 # out_channels=4 * feature_size # deconv1 + concat1 + expand_1_1+1_2 (decoder 5 has no 1_2)
+        # output_2 receives the same input as expand_2_1
 
         # Level 3
-        dec1 = self.decoder3(dec2, enc2) # upsample dec2 # out_channels=2 * feature_size  # deconv2 + concat2 + expand_2_1+2_2 (decoder 5에는 2_2는 없음) 
+        dec1 = self.decoder3(dec2, enc2) # upsample dec2 # out_channels=2 * feature_size  # deconv2 + concat2 + expand_2_1+2_2 (decoder 5 has no 2_2)
 
         # Level 2
-        dec0 = self.decoder2(dec1, enc1) # upsample dec1 # out_channels= feature_size # deconv3 + concat3 + expand_3_1+3_2 (decoder 5에는 3_2는 없음)
+        dec0 = self.decoder2(dec1, enc1) # upsample dec1 # out_channels= feature_size # deconv3 + concat3 + expand_3_1+3_2 (decoder 5 has no 3_2)
 
         # Level 1
-        out = self.decoder1(dec0, enc0) # upsample dec0 # out_channels= feature_size # deconv4 + expand_4_1+4_2 (decoder 5에는 3_2는 없음)
-        logits = self.out(out) # out_channels= out_channels # conv_5 (conv_5는 upsample이 없는 반면, decoder1은 마지막 upsample이 한번 더 있음)
+        out = self.decoder1(dec0, enc0) # upsample dec0 # out_channels= feature_size # deconv4 + expand_4_1+4_2 (decoder 5 has no 3_2)
+        logits = self.out(out) # out_channels= out_channels # conv_5 (conv_5 has no upsample, whereas decoder1 has one more final upsample)
 
         # Decoder path with deep supervision
         # First deep supervision at level 4

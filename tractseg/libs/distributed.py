@@ -32,7 +32,7 @@ def _get_sync_file():
     
 def init_distributed(args):   
     
-    # torchrun: sbatch script에서 WORLD_SIZE를 지정해준 경우 (노드 당 gpu * 노드의 수)
+    # torchrun: case where the sbatch script sets WORLD_SIZE (gpus per node * number of nodes)
     if "WORLD_SIZE" in os.environ: # for torchrun
         args.world_size = int(os.environ["WORLD_SIZE"])
         #print('args.world_size:',args.world_size)

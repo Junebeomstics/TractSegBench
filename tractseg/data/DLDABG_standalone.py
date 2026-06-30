@@ -118,12 +118,12 @@ def zero_mean_unit_variance_normalization_pytorch(data, per_channel=True, epsilo
         data = torch.from_numpy(data)
     
     if per_channel:
-        # 채널별로 정규화 [B, C, ...]
-        dims = tuple(range(2, data.dim()))  # 채널 이후의 모든 차원
+        # Normalize per channel [B, C, ...]
+        dims = tuple(range(2, data.dim()))  # All dimensions after the channel
         mean = data.mean(dim=dims, keepdim=True)
         std = data.std(dim=dims, keepdim=True) + epsilon
     else:
-        # 배치별로 정규화 [B, ...]
+        # Normalize per batch [B, ...]
         dims = tuple(range(1, data.dim()))
         mean = data.mean(dim=dims, keepdim=True)
         std = data.std(dim=dims, keepdim=True) + epsilon
