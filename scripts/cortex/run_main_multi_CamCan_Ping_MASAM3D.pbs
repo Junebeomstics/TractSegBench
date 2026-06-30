@@ -1,0 +1,21 @@
+#!/bin/bash -l 
+
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+# training
+#CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --weights_path $DATA_PATH/MA-SAM/checkpoints/sam_vit_l_0b3195.pth --lw --data_path $DATA_PATH --config CamCan_Ping_experiment_MASAM3D_x1 --en CamCan_Ping_experiment_MASAM3D --train True --test True --seg --gradient_clip 1 #--rt --with_id TRAC-1298 & #--rt --with_id TRAC-1146 & 
+# sleep 20
+#CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 1 --weights_path $DATA_PATH//MA-SAM/checkpoints/sam_vit_l_0b3195.pth --lw --data_path $DATA_PATH --config CamCan_Ping_experiment_MASAM3D_x1 --en CamCan_Ping_experiment_MASAM3D --train True --test True --seg --gradient_clip 1 #--rt --with_id TRAC-1299 & #--rt --with_id TRAC-1151 & 
+# sleep 20
+ CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 2 --weights_path $DATA_PATH//MA-SAM/checkpoints/sam_vit_l_0b3195.pth --lw --data_path $DATA_PATH --config CamCan_Ping_experiment_MASAM3D_x1 --en CamCan_Ping_experiment_MASAM3D --train True --test True --seg --gradient_clip 1 #--rt --with_id TRAC-1301 & #--rt --with_id TRAC-1153 & 
+# wait
+
+
+# inference only
+#./ExpRunner --fold 0 --data_path /grand/NeuroX/junbeom/TractSegVis --config Ping_experiment_TractSeg --en Ping_experiment_TractSeg --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz #--seg 
+#./ExpRunner --config wholevisualtract_experiment --en run_with_vis_settings --train True --test True

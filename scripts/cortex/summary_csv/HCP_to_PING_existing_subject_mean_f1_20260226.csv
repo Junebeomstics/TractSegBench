@@ -1,0 +1,20 @@
+generated_date,result_source,model,fold,experiment_name,subject_score_file,fold_subject_count,fold_mean_subject_f1,model_pooled_subject_mean_f1
+2026-02-26,existing_hcp_exp,TractSeg2D,1,HCP_to_PING_experiment_TractSeg_inference_x1,subj_f1_scores_test0.pkl,17,0.241213,0.237593
+2026-02-26,existing_hcp_exp,TractSeg2D,2,HCP_to_PING_experiment_TractSeg_inference_x2,subj_f1_scores_test1.pkl,17,0.230352,0.237593
+2026-02-26,existing_hcp_exp,TractSeg2D,3,HCP_to_PING_experiment_TractSeg_inference_x3,subj_f1_scores_test2.pkl,17,0.241215,0.237593
+2026-02-26,existing_hcp_exp,TractSeg3D,1,HCP_to_PING_experiment_TractSeg3D_inference_x1,subj_f1_scores_test0.pkl,17,0.217842,0.178803
+2026-02-26,existing_hcp_exp,TractSeg3D,2,HCP_to_PING_experiment_TractSeg3D_inference_x2,subj_f1_scores_test1.pkl,17,0.100728,0.178803
+2026-02-26,existing_hcp_exp,TractSeg3D,3,HCP_to_PING_experiment_TractSeg3D_inference_x3,subj_f1_scores_test2.pkl,17,0.217839,0.178803
+2026-02-26,existing_hcp_exp,SwinUNETR2D,1,HCP_to_PING_experiment_swinunetr_inference_x1,subj_f1_scores_test0.pkl,17,0.258996,0.323817
+2026-02-26,existing_hcp_exp,SwinUNETR2D,2,HCP_to_PING_experiment_swinunetr_inference_x2,subj_f1_scores_test1.pkl,17,0.355616,0.323817
+2026-02-26,existing_hcp_exp,SwinUNETR2D,3,HCP_to_PING_experiment_swinunetr_inference_x3,subj_f1_scores_test2.pkl,17,0.356838,0.323817
+2026-02-26,existing_hcp_exp,SwinUNETR3D,1,HCP_to_PING_experiment_swinunetr3D_inference_x1,subj_f1_scores_test0.pkl,17,0.361422,0.287242
+2026-02-26,existing_hcp_exp,SwinUNETR3D,2,HCP_to_PING_experiment_swinunetr3D_inference_x2,subj_f1_scores_test1.pkl,17,0.246548,0.287242
+2026-02-26,existing_hcp_exp,SwinUNETR3D,3,HCP_to_PING_experiment_swinunetr3D_inference_x3,subj_f1_scores_test2.pkl,17,0.253756,0.287242
+2026-02-26,existing_hcp_exp,MASAM3D,1,HCP_to_PING_experiment_MASAM3D_inference_x1,subj_f1_scores_test0.pkl,17,0.169128,0.122547
+2026-02-26,existing_hcp_exp,MASAM3D,2,HCP_to_PING_experiment_MASAM3D_inference_x2,subj_f1_scores_test1.pkl,17,0.107740,0.122547
+2026-02-26,existing_hcp_exp,MASAM3D,3,HCP_to_PING_experiment_MASAM3D_inference_x3,subj_f1_scores_test2.pkl,17,0.090775,0.122547
+2026-02-26,existing_hcp_exp,MedNeXt3D,1,HCP_to_PING_experiment_mednext3D_inference_x1,subj_f1_scores_test0.pkl,17,0.228564,0.196826
+2026-02-26,existing_hcp_exp,MedNeXt3D,2,HCP_to_PING_experiment_mednext3D_inference_x2,subj_f1_scores_test1.pkl,17,0.203996,0.196826
+2026-02-26,existing_hcp_exp,MedNeXt3D,3,HCP_to_PING_experiment_mednext3D_inference_x3,subj_f1_scores_test2.pkl,17,0.157919,0.196826
+2026-02-26,existing_hcp_exp,ALL_6_MODELS,all,HCP_to_PING_experiment_*,-,- ,-,0.224471

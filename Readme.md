@@ -24,14 +24,16 @@ The main workflow is:
 
 ## Repository Layout
 
-- `ExpRunner`: training, validation, inference, segmentation, and probability-map entrypoint.
+- `ExpRunner`: legacy combined training, validation, inference, segmentation, and probability-map entrypoint.
+- `bin/TrainModel` and `bin/RunInference`: replication-oriented wrappers that separate training and inference defaults.
 - `tractseg/`: core package with data loaders, model definitions, experiment configs, metrics, and utilities.
-- `tractseg/experiments/custom/`: benchmark experiment configs for HCP, CamCan, PING, and combined-source training.
+- `tractseg/models/segment_anything/`: vendored SAM code used by MASAM.
+- `tractseg/models/mednext/`: vendored MedNeXt v1 architecture subset used by the benchmark models.
+- `configs/`: benchmark experiment configs for HCP, CamCan, PING, and combined-source training, kept at the repository root so they are easy to find. `ExpRunner --config=<name>` imports `configs/<name>.py`.
 - `preprocessing/`: dataset-specific scripts for converting brainlife tract masks and peaks into training-ready files.
-- `scripts/polaris/`: Polaris PBS scripts for model training and inference.
+- `scripts/polaris/`: legacy Polaris PBS examples for special cluster runs, not the default replication path.
 - `scripts/cortex/`: inference/evaluation orchestration and summary CSVs used in the current benchmark workflow.
 - `analyze_outputs/`: small utilities for TractSeg CLI baseline prediction and Dice calculation.
-- `mednext/`, `segment_anything/`, `apex/`: model dependencies or experimental model code inherited by benchmark variants.
 - `resources/`: original TractSeg resources kept for compatibility, including the MNI FA template.
 
 The broader `/mnt/scratch/junb/TractSegVis` workspace also contains large data
@@ -40,11 +42,33 @@ output folders should not be committed into this code repository.
 
 ## Runtime Environment
 
-Use the `masam_blackwell` conda environment for Python commands:
+The recommended environment is `tsbench`, a faithful clone of the maintained
+local `masam_blackwell` environment (Python 3.10, CUDA 12.8 / Blackwell-class
+GPU build, pinned conda + pip packages). For a new checkout, create it and
+install this repository in editable mode:
 
 ```bash
-conda run -n masam_blackwell python -m pip install -e .
+conda env create -f envs/tsbench.yml
+conda run -n tsbench python -m pip install --no-build-isolation --no-deps -e .
+conda run -n tsbench python tests/test_model_imports.py
 ```
+
+`envs/tsbench.yml` was generated from `masam_blackwell` with
+`conda env export --no-builds`, so the conda toolchain (CUDA 12.8 stack) and pip
+packages are pinned to known-good versions. The pins target a CUDA 12.8 /
+Blackwell host; on other GPUs or CUDA versions, adjust the `cuda-*`, `libcu*`,
+and `pytorch`/`nvidia` pins to match your driver before creating the env.
+
+`masam_blackwell` remains the maintained source environment and can still be used
+directly for one-off commands:
+
+```bash
+conda run -n masam_blackwell python -m pip install --no-build-isolation --no-deps -e .
+conda run -n masam_blackwell python tests/test_model_imports.py
+```
+
+The older hand-written `envs/environment.yml` (`tractseg-benchmark`, CUDA 11.8)
+is kept as a lighter-weight fallback for non-Blackwell hosts.
 
 For workflows that need FSL or MRtrix, prefer Docker unless a cluster module is
 explicitly required:
@@ -160,31 +184,29 @@ and that their spatial dimensions match.
 
 ## Training Models
 
-Training is controlled by `ExpRunner` plus a custom config under
-`tractseg/experiments/custom/`.
+Training is controlled by `TrainModel` plus a custom config under `configs/` at
+the repository root. `TrainModel` delegates to `ExpRunner` but always sets
+training defaults explicitly. The `--config <name>` argument loads
+`configs/<name>.py`.
 
 Example: train TractSeg 2D on HCP fold 0.
 
 ```bash
-conda run -n masam_blackwell python ./ExpRunner \
+conda run -n masam_blackwell TrainModel \
   --fold 0 \
   --data_path /mnt/storage/junb \
   --config wholeHCP_experiment_TractSeg \
-  --en wholeHCP_experiment_TractSeg_x1 \
-  --train True \
-  --test True
+  --en wholeHCP_experiment_TractSeg_x1
 ```
 
 Example: train a combined-source model.
 
 ```bash
-conda run -n masam_blackwell python ./ExpRunner \
+conda run -n masam_blackwell TrainModel \
   --fold 0 \
   --data_path /mnt/storage/junb \
   --config HCP_CamCan_Ping_experiment_TractSeg \
-  --en HCP_CamCan_Ping_experiment_TractSeg_x1 \
-  --train True \
-  --test True
+  --en HCP_CamCan_Ping_experiment_TractSeg_x1
 ```
 
 Relevant config conventions:
@@ -195,38 +217,56 @@ Relevant config conventions:
 - `LABELS_FILENAME`: usually `corrected_bundle_masks` or `aligned_corrected_bundle_masks`.
 - `CLASSES`: `Brainlife` for the 61-channel benchmark labels.
 - `DIM`: `2D` or `3D`.
-- `MODEL`: `UNet_Pytorch_DeepSup`, `swinunetr`, `MASAM`, `mednext3D`, or another configured model.
+- `MODEL`: one of the maintained benchmark model families: `UNet_Pytorch_DeepSup`, `UNet3D_Pytorch_DeepSup_sm`, `SwinUNETR`, `MASAM`, or `mednext_v1`.
 
-Cluster-ready examples live in `scripts/polaris/`. For a complete sweep, use the
-multi-source scripts such as:
+### SAM pretrained weights for MASAM (training from scratch)
 
-```text
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_tractseg.pbs
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_tractseg3D.pbs
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_swinunetr.pbs
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_swinunetr3D.pbs
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_MASAM3D.pbs
-scripts/polaris/run_main_multi_HCP_CamCan_Ping_mednext3D.pbs
+The `MASAM` model fine-tunes a Segment Anything (SAM) backbone. Those original
+SAM weights are **not vendored in this repository** and are not downloaded
+automatically, so a first-time / from-scratch MASAM run must fetch them
+manually. Download the checkpoint matching the config's `vit_name` from the
+official SAM release (the same links given in the "Training" section of the
+upstream MA-SAM repo, https://github.com/cchen-cc/MA-SAM):
+
+| `vit_name` | checkpoint file | download URL |
+|------------|-----------------|--------------|
+| `vit_b`    | `sam_vit_b_01ec64.pth` | https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth |
+| `vit_l`    | `sam_vit_l_0b3195.pth` | https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth |
+| `vit_h`    | `sam_vit_h_4b8939.pth` | https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth |
+
+For example:
+
+```bash
+mkdir -p checkpoints
+wget -P checkpoints https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth
 ```
+
+Then, in the MASAM config, point `WEIGHTS_PATH` at the downloaded `.pth` file,
+set `LOAD_WEIGHTS = True`, and make sure `vit_name` matches the checkpoint
+(e.g. `vit_b` with `sam_vit_b_01ec64.pth`). Only when all three hold does the
+backbone load; otherwise it falls back to random initialization. When resuming a
+run or running inference from a saved benchmark checkpoint, set `WEIGHTS_PATH` to
+that benchmark checkpoint instead of the raw SAM weights.
+
+Polaris PBS files are retained only as legacy cluster examples. Prefer the
+conda-based commands above for replication and adapt fold/config/model matrices
+outside the repository-specific scheduler scripts.
 
 ## Inference and Evaluation
 
-Use `ExpRunner` with `--train False`, `--test False`, `--lw`, a weight path, and
-`--seg` to generate binary segmentations.
+Use `RunInference` with an explicit `--weights_path` to generate binary
+segmentations. The wrapper sets `--train False`, `--test False`, `--lw`, and
+`--seg` unless `--probs` is provided.
 
 Example: evaluate an HCP-trained model on CamCan.
 
 ```bash
-conda run -n masam_blackwell python ./ExpRunner \
+conda run -n masam_blackwell RunInference \
   --fold 0 \
   --data_path /mnt/storage/junb \
   --config CamCan_experiment_TractSeg \
   --en HCP_to_CamCan_experiment_TractSeg_inference_x1 \
-  --train False \
-  --test False \
-  --lw \
-  --weights_path /mnt/storage/junb/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz \
-  --seg
+  --weights_path /mnt/storage/junb/hcp_exp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz
 ```
 
 The output is written under:
@@ -248,12 +288,11 @@ bash analyze_outputs/1.predict_bundle_masks_with_TractSeg_CLI.sh
 conda run -n masam_blackwell python analyze_outputs/2.concat_predicted_segmentations_and_calc_dice.py
 ```
 
-## Current Refactoring Plan
+## Maintenance Plan
 
-The repo still contains a mixture of upstream TractSeg code, benchmark code,
-cluster logs, notebook checkpoints, generated Python caches, and experimental
-model branches. Cleanup should be staged so that benchmark reproducibility is
-not broken.
+The repo still contains upstream TractSeg compatibility code, benchmark code,
+cluster logs, notebook checkpoints, and generated Python caches. Cleanup should
+be staged so benchmark reproducibility is not broken.
 
 ### Phase 1: Safe repository hygiene
 
@@ -282,12 +321,12 @@ not broken.
 - Move old or unused Zenodo/visual-tract configs into an archive folder if they
   are not part of the paper benchmark.
 
-### Phase 4: Model-code pruning
+### Phase 4: Model-code boundaries
 
-- Keep model families that appear in the paper experiments.
-- Archive or remove unused experimental code only after import/reference checks:
-  `latentdiffusionmodel`, `nnformer`, unused SAM variants, obsolete pretrained
-  configs, and old TractSeg tractometry-only paths are likely candidates.
+- Keep the maintained model families under `tractseg/models/`: TractSeg U-Net,
+  SwinUNETR, MedNeXt v1, and MASAM/SAM.
+- Add new model families only through `tractseg/models/` and a named experiment
+  config so model ownership stays inside one codebase.
 - Preserve original TractSeg CLI compatibility until the benchmark no longer
   needs the CLI baseline.
 

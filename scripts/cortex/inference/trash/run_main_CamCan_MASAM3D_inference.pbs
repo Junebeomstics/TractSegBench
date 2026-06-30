@@ -1,0 +1,42 @@
+#!/bin/bash -l 
+
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+# inference only
+
+./ExpRunner --fold 0 --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D/best_weights_ep45.npz --lw --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en CamCan_to_CamCan_experiment_MASAM3D_x1 --train False --test True  --seg & 
+sleep 20
+./ExpRunner --fold 1 --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D_x1/best_weights_ep36.npz --lw --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en CamCan_to_CamCan_experiment_MASAM3D_x2 --train False --test True --seg & 
+sleep 20
+./ExpRunner --fold 2 --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D_x2/best_weights_ep50.npz --lw --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en CamCan_to_CamCan_experiment_MASAM3D_x3 --train False --test True --seg & 
+sleep 20
+
+
+# from HCP+CAMCAN+PING
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_CamCan_experiment_MASAM3D_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x8/best_weights_ep29.npz --seg & # --seg --rt --with_id TRAC-469
+wait
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_CamCan_experiment_MASAM3D_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x9/best_weights_ep25.npz  --seg &
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_CamCan_experiment_MASAM3D_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x10/best_weights_ep20.npz --seg &
+sleep 20
+
+# from HCP all
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x22/best_weights_ep28.npz --seg &
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x1/best_weights_ep27.npz  --seg &
+wait
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x23/best_weights_ep37.npz --seg &
+sleep 20
+
+#from HCP+PING (running)
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_PING_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_MASAM3D/best_weights_ep36.npz --seg &
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_PING_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_MASAM3D_x1/best_weights_ep23.npz --seg &
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_MASAM3D_x1 --en HCP_PING_to_CamCan_experiment_MASAM3D --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_MASAM3D_x2/best_weights_ep28.npz --seg &
+wait

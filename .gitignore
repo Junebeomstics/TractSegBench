@@ -1,5 +1,6 @@
 .idea
 apex*
+/mednext/
 core*
 .vscode
 *.pyc
@@ -36,3 +37,8 @@ tractseg/experiments/TractSeg/*
 tractseg/experiments/Peaks/*
 tractseg/experiments/Schizo/*
 tractseg/experiments/UNet3D_and_TOMxyz/*
+
+# Agent tooling artifacts
+.omc/
+.omx/
+.codex

@@ -1,0 +1,45 @@
+#!/bin/bash -l 
+
+
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+# inference only
+
+### TractSeg3D
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en CamCan_to_CamCan_experiment_TractSeg3D_x1 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x1/best_weights_ep58.npz & #--rt --with_id TRAC-444
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en CamCan_to_CamCan_experiment_TractSeg3D_x2 --train False --test True --seg  --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz & #& #--rt --with_id TRAC-444
+sleep 20
+# split 2 was overided with fold1
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en CamCan_to_CamCan_experiment_TractSeg3D_x3 --train False --test True --seg  --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz & #& #--rt --with_id TRAC-444
+sleep 20
+
+# from HCP+CAMCAN+PING
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_CamCan_PING_to_CamCan_experiment_TractSeg3D_x1 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x3/best_weights_ep7.npz  & # --seg --rt --with_id TRAC-469
+wait
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_CamCan_PING_to_CamCan_experiment_TractSeg3D_x2 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x4/best_weights_ep8.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_CamCan_PING_to_CamCan_experiment_TractSeg3D_x3 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x5/best_weights_ep7.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+
+# from HCP all
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_to_CamCan_experiment_TractSeg3D_x1 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x14/best_weights_ep17.npz & # --seg --rt --with_id TRAC-469
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_to_CamCan_experiment_TractSeg3D_x2 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x1/best_weights_ep13.npz  & # --seg --rt --with_id TRAC-469
+wait
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_to_CamCan_experiment_TractSeg3D_x3 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x15/best_weights_ep19.npz  & # --seg --rt --with_id TRAC-469
+sleep 20
+
+
+# # TractSeg3D from HCP+PING
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_PING_to_CamCan_experiment_TractSeg3D_x1 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_TractSeg3D/best_weights_ep9.npz &
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_PING_to_CamCan_experiment_TractSeg3D_x2 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_TractSeg3D_x1/best_weights_ep12.npz &
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_TractSeg3D --en HCP_PING_to_CamCan_experiment_TractSeg3D_x3 --train False --test True --seg --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_TractSeg3D_x2/best_weights_ep11.npz &
+wait

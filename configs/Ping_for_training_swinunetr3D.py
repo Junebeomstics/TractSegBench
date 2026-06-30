@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+from tractseg.experiments.base import Config as BaseConfig
+
+
+class Config(BaseConfig):
+    EXP_NAME = os.path.basename(__file__).split(".")[0]
+
+    DATASET = "Ping"
+    DATA_PATH = os.environ.get("TRACTSEG_DATASET_ROOT", "/mnt/storage/junb/TractSeg_datasets")
+    DATASET_FOLDER = "PIng_preproc_brainlife_fixed_dwi_aligned"
+    FEATURES_FILENAME = "aligned_peaks"
+    LABELS_FILENAME = "corrected_bundle_masks"
+    NR_OF_CLASSES = 61
+    NR_SLICES = 1
+    BATCH_SIZE = 2
+    COMPILE = True
+    CLASSES = "Brainlife"
+
+    MODEL = "SwinUNETR"
+    INPUT_DIM = (160, 160, 160)
+    DIM = "3D"
+    FEATURE_SIZE = 24
+    SLICE_DIRECTION = "y"
+    TRAINING_SLICE_DIRECTION = "xyz"
+    TYPE = "single_direction"
+    RESOLUTION = "1.25mm"
+
+    WEIGHTS_PATH = ""
+    LOAD_WEIGHTS = False
+
+    USE_DROPOUT = False
+    FP16 = True
+    NUM_EPOCHS = 250
+    LEARNING_RATE = 0.001
+    LR_SCHEDULE = True
+    LR_SCHEDULE_MODE = "min"
+    LOSS_FUNCTION = "default"
+
+    LOG_PER_BUNDLE = True
+    DATA_AUGMENTATION = True
+    NUM_PROCESSES = 2
+    LR_SCHEDULE_TYPE = "CosineAnnealingLR"
+    GRADIENT_CLIP = 1

@@ -51,7 +51,7 @@ def _get_weights_for_this_epoch(Config, epoch_nr):
         exp_utils.print_and_save(Config.EXP_PATH, "Current weight_factor: {}".format(weight_factor))
     return weight_factor
 
-def train_model(Config, model, run, scheduler=None):
+def train_model(Config, model, run):
     epoch_times = []
     nr_of_updates = 0
 
@@ -144,24 +144,12 @@ def train_model(Config, model, run, scheduler=None):
                     
                     utils.check_tensor_values(subject, x, y)
                 
-                    if Config.MODEL == "LatentDiffusionModel":
-                        # Sample random timesteps
-                        timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
-
-                        # Add noise to inputs (forward diffusion)
-                        noise = torch.randn_like(x)
-                        x = scheduler.add_noise(x, noise, timesteps)
-                        y = noise
-                    else:
-                        noise = None
-                        timesteps = None
-
                     timings["data_preparation_time"] += time.time() - start_time_data_preparation
                     start_time_network = time.time()
                     #nr_of_updates += 1
                     
                     # base_model
-                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
+                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, type=type)
                     timings["network_time"] += time.time() - start_time_network
                     start_time_metrics = time.time()
                     # if Config.distributed:
@@ -215,24 +203,12 @@ def train_model(Config, model, run, scheduler=None):
                         y = torch.unsqueeze(y,0)  # (1, nr_slices, nr_classes, x, y) # batch size = 1
 
 
-                    if Config.MODEL == "LatentDiffusionModel":
-                        # Sample random timesteps
-                        timesteps = torch.randint(0, scheduler.num_train_timesteps, (x.size(0),), device=x.device)
-
-                        # Add noise to inputs (forward diffusion)
-                        noise = torch.randn_like(x)
-                        x = scheduler.add_noise(x, noise, timesteps)
-                        y = noise
-                    else:
-                        noise = None
-                        timesteps = None
-
                     timings["data_preparation_time"] += time.time() - start_time_data_preparation
                     start_time_network = time.time()
                     #nr_of_updates += 1
                     
                     # base_model
-                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, timesteps=timesteps, type=type)
+                    probs, metr_batch = model.train(x, y, weight_factor=weight_factor, type=type)
                     timings["network_time"] += time.time() - start_time_network
                     start_time_metrics = time.time()
                     metrics = metric_utils._update_metrics(Config.CALC_F1, Config.EXPERIMENT_TYPE, Config.METRIC_TYPES,

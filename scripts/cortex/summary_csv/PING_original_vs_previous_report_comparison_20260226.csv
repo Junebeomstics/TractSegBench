@@ -1,0 +1,7 @@
+model,previous_report_subject_mean_f1,original_storage_subject_mean_f1,difference_original_minus_previous
+TractSeg2D,0.237593,0.237593,0.000000
+TractSeg3D,0.178803,0.178803,0.000000
+SwinUNETR2D,0.323817,0.323817,0.000000
+SwinUNETR3D,0.287242,0.287242,0.000000
+MASAM3D,0.122547,0.122547,0.000000
+MedNeXt3D,0.196826,0.196826,0.000000

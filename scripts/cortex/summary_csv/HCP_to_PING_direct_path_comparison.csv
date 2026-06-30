@@ -1,0 +1,7 @@
+model,storageorig_direct_subject_mean_f1,alignedreal_direct_subject_mean_f1,difference_aligned_minus_storageorig
+TractSeg2D,0.237591,0.165383,-0.072208
+TractSeg3D,0.178801,0.173568,-0.005233
+SwinUNETR2D,0.323821,0.220873,-0.102947
+SwinUNETR3D,0.287239,0.280453,-0.006787
+MASAM3D,0.122549,0.099539,-0.023010
+MedNeXt3D,0.196813,0.159683,-0.037130

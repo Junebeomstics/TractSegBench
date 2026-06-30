@@ -1,0 +1,48 @@
+#!/bin/bash -l 
+
+
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+# inference only
+
+# from CamCan
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en CamCan_to_CamCan_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x2/best_weights_ep205.npz --seg &
+sleep 20
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en CamCan_to_CamCan_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x5/best_weights_ep68.npz --seg &
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en CamCan_to_CamCan_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x6/best_weights_ep65.npz --seg &
+sleep 20
+
+
+# from HCP+CAMCAN+PING
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP+CAMCAN+PING_to_CamCan_swinunetr_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x4/best_weights_ep27.npz  --seg & # --seg --rt --with_id TRAC-469
+wait
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP+CAMCAN+PING_to_CamCan_swinunetr_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x5/best_weights_ep25.npz --seg & # --seg --rt --with_id TRAC-469
+sleep 20
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP+CAMCAN+PING_to_CamCan_swinunetr_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x6/best_weights_ep33.npz --seg & # --seg --rt --with_id TRAC-469
+sleep 20
+
+# # from HCP all
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_to_CamCan_swinunetr_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz --seg & # --seg --rt --with_id TRAC-469
+sleep 20
+
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_to_CamCan_swinunetr_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x12/best_weights_ep28.npz  --seg & # --seg --rt --with_id TRAC-469
+wait 
+
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_to_CamCan_swinunetr_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x13/best_weights_ep22.npz  --seg & # --seg --rt --with_id TRAC-469
+sleep 20
+
+# # SwinUNETR2D from HCP+PING
+./ExpRunner --fold 0 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_PING_to_CamCan_experiment_swinunetr_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_swinunetr/best_weights_ep22.npz --seg &
+sleep 20
+
+./ExpRunner --fold 1 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_PING_to_CamCan_experiment_swinunetr_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_swinunetr_x1/best_weights_ep23.npz --seg &
+sleep 20
+
+./ExpRunner --fold 2 --data_path $DATA_PATH --config CamCan_experiment_swinunetr --en HCP_PING_to_CamCan_experiment_swinunetr_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_Ping_experiment_swinunetr_x2/best_weights_ep18.npz --seg &
+wait

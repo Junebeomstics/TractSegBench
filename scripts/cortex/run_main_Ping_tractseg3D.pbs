@@ -1,0 +1,16 @@
+#!/bin/bash -l 
+
+
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+
+
+# training
+CUDA_VISIBLE_DEVICES=0 ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D_orig_peaks --en Ping_experiment_TractSeg3D --train True --test True --seg --num_processes 4 & # TRAC-1147 &
+wait
+

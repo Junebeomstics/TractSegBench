@@ -15,16 +15,15 @@ class Config:
     """
     
     script_path = os.path.abspath(__file__)
-    # Find the path up to the "TractSeg" folder
-    target_folder = "TractSeg"
-    parts = script_path.split(os.sep)  
-    if target_folder in parts:
-        target_index = parts.index(target_folder)
-        HOME = os.sep.join(parts[: target_index + 1])
-        print("Path up to TractSeg folder:", HOME)
-    else:
-        print(f"'{target_folder}' folder not found.")
-    TRACT_SEG_HOME=join(HOME,'.tractseg') 
+    # Repo root is always three levels up from this file:
+    #   <repo_root>/tractseg/experiments/base.py
+    # Historically HOME was derived by searching the path for a folder named
+    # literally "TractSeg", which broke when the checkout is renamed
+    # (e.g. "TractSegBench"). Derive it from this file's location instead so it
+    # works regardless of the repository folder name.
+    HOME = os.path.dirname(os.path.dirname(os.path.dirname(script_path)))
+    print("Repo root (HOME):", HOME)
+    TRACT_SEG_HOME=join(HOME,'.tractseg')
     NETWORK_DRIVE = None
     WEIGHTS_DIR = TRACT_SEG_HOME
     DATA_PATH = None

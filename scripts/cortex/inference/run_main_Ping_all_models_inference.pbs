@@ -1,0 +1,289 @@
+#!/bin/bash -l 
+source /home/junb/miniconda3/bin/activate
+conda activate masam
+
+cd /mnt/scratch/junb/TractSegVis/TractSeg
+
+DATA_PATH="/mnt/scratch/junb/TractSegVis/"
+
+# inference only
+# from PING
+# # TractSeg2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en PING_to_PING_experiment_TractSeg_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg_x9/best_weights_ep105.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en PING_to_PING_experiment_TractSeg_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg_x10/best_weights_ep105.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en PING_to_PING_experiment_TractSeg_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg_x12/best_weights_ep193.npz --seg &
+# wait
+
+# # TractSeg3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en PING_to_PING_experiment_TractSeg3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg3D_x1/best_weights_ep51.npz  --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en PING_to_PING_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg3D_x2/best_weights_ep53.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en PING_to_PING_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_TractSeg3D_x3/best_weights_ep35.npz --seg &
+# wait
+
+# # SwinUNETR2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en PING_to_PING_experiment_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr_x17/best_weights_ep174.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en PING_to_PING_experiment_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr_x18/best_weights_ep104.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en PING_to_PING_experiment_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr_x19/best_weights_ep111.npz --seg & 
+# sleep 20
+
+# # SwinUNETR3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en PING_to_PING_experiment_swinunetr3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr3D_x7/best_weights_ep36.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en PING_to_PING_experiment_swinunetr3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr3D_x8/best_weights_ep33.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en PING_to_PING_experiment_swinunetr3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_swinunetr3D_x9/best_weights_ep29.npz --seg & 
+# wait
+
+# # MASAM3D
+# ./ExpRunner --fold 0  --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en PING_to_PING_experiment_MASAM3D_inference_x1 --train False --test True --gradient_clip 1  --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_MASAM3D/best_weights_ep38.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1  --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en PING_to_PING_experiment_MASAM3D_inference_x2 --train False --test True --gradient_clip 1 --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_MASAM3D_x1/best_weights_ep113.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2  --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en PING_to_PING_experiment_MASAM3D_inference_x3 --train False --test True --gradient_clip 1 --lw --weights_path /mnt/storage/junb/hcp_ecp/Ping_experiment_MASAM3D_x2/best_weights_ep131.npz --seg & 
+# sleep 20
+
+# # MedNext3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en PING_to_PING_experiment_mednext3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_mednext3D/best_weights_ep74.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en PING_to_PING_experiment_mednext3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_mednext3D_x1/best_weights_ep40.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en PING_to_PING_experiment_mednext3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_Ping_mednext3D_x2/best_weights_ep62.npz --seg & 
+# sleep 20
+
+
+
+# # from HCP+CAMCAN+PING
+# # TractSeg2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_PING_to_PING_experiment_TractSeg_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg_x2/best_weights_ep22.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_PING_to_PING_experiment_TractSeg_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg_x3/best_weights_ep25.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_PING_to_PING_experiment_TractSeg_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg_x4/best_weights_ep26.npz --seg & 
+# wait
+
+# # TractSeg3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_PING_to_PING_experiment_TractSeg3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x3/best_weights_ep7.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_PING_to_PING_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x4/best_weights_ep8.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_PING_to_PING_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_TractSeg3D_x5/best_weights_ep7.npz --seg & 
+# sleep 20
+
+# SwinUNETR2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_PING_to_PING_experiment_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x4/best_weights_ep27.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_PING_to_PING_experiment_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x5/best_weights_ep25.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_PING_to_PING_experiment_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr_x6/best_weights_ep33.npz --seg & 
+# wait
+
+# SwinUNETR3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_PING_to_PING_experiment_swinunetr3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr3D_x2/best_weights_ep7.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_PING_to_PING_experiment_swinunetr3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr3D_x3/best_weights_ep8.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_PING_to_PING_experiment_swinunetr3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_swinunetr3D_x4/best_weights_ep7.npz --seg & 
+# wait
+
+# # MASAM3D
+# ./ExpRunner --fold 0 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x8/best_weights_ep29.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_PING_experiment_MASAM3D_inference_x1 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x9/best_weights_ep25.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_PING_experiment_MASAM3D_inference_x2 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_MASAM3D_x10/best_weights_ep20.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_Ping_to_PING_experiment_MASAM3D_inference_x3 --train False --test True --gradient_clip 1 --seg & 
+# wait
+
+# # MedNext3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_PING_to_PING_experiment_mednext3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_mednext3D/best_weights_ep18.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_PING_to_PING_experiment_mednext3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_mednext3D_x1/best_weights_ep16.npz --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_PING_to_PING_experiment_mednext3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_Ping_experiment_mednext3D_x2/best_weights_ep14.npz --seg & 
+# wait
+
+# # from HCP all
+# # TractSeg2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_to_PING_experiment_TractSeg_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_to_PING_experiment_TractSeg_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg_x1/best_weights_ep68.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_to_PING_experiment_TractSeg_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg_x14/best_weights_ep73.npz --seg & 
+# sleep 20
+
+# # TractSeg3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_to_PING_experiment_TractSeg3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x14/best_weights_ep17.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_to_PING_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x1/best_weights_ep13.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_to_PING_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_TractSeg3D_x14/best_weights_ep17.npz --seg & 
+# sleep 20
+
+# # SwinUNETR2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_to_PING_experiment_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x11/best_weights_ep67.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_to_PING_experiment_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x12/best_weights_ep28.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_to_PING_experiment_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr_x13/best_weights_ep22.npz --seg & 
+# sleep 20
+
+# # SwinUNETR3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_to_PING_experiment_swinunetr3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr3D_x12/best_weights_ep26.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_to_PING_experiment_swinunetr3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr3D_x80/best_weights_ep6.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_to_PING_experiment_swinunetr3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_swinunetr3D_x81/best_weights_ep6.npz --seg & 
+# wait
+
+# # MASAM3D
+# ./ExpRunner --fold 0 --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x22/best_weights_ep28.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_to_PING_experiment_MASAM3D_inference_x1 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x1/best_weights_ep27.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_to_PING_experiment_MASAM3D_inference_x2 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+# ./ExpRunner --fold 2 --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_wholeHCP_MASAM3D_x23/best_weights_ep37.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_to_PING_experiment_MASAM3D_inference_x3 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+
+# # MedNext3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_to_PING_experiment_mednext3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_mednext3D_x20/best_weights_ep17.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_to_PING_experiment_mednext3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_mednext3D_x21/best_weights_ep18.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_to_PING_experiment_mednext3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/wholeHCP_experiment_mednext3D_x22/best_weights_ep19.npz --seg & 
+# sleep 20
+
+
+# # from CAMCAN
+# # TractSeg2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en CamCan_to_PING_experiment_TractSeg_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg_x1/best_weights_ep224.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en CamCan_to_PING_experiment_TractSeg_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg_x4/best_weights_ep45.npz --seg &
+# wait
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en CamCan_to_PING_experiment_TractSeg_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg_x5/best_weights_ep107.npz --seg &
+# sleep 20
+
+# # TractSeg3D from CAMCAN
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en CamCan_to_PING_experiment_TractSeg3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x1/best_weights_ep58.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en CamCan_to_PING_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz --seg &
+# sleep 20
+
+# #./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en CamCan_to_PING_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_TractSeg3D_x6/best_weights_ep16.npz --seg &
+# #sleep 20
+# # TractSeg3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+
+# # SwinUNETR2D from CAMCAN
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en CamCan_to_PING_experiment_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x2/best_weights_ep205.npz --seg &
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en CamCan_to_PING_experiment_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x5/best_weights_ep68.npz --seg &
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en CamCan_to_PING_experiment_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr_x6/best_weights_ep65.npz --seg &
+# sleep 20
+
+# # SwinUNETR3D from CAMCAN
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en CamCan_to_PING_experiment_swinunetr3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr3D_x2/best_weights_ep20.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en CamCan_to_PING_experiment_swinunetr3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/run_with_CamCan_swinunetr3D_x6/best_weights_ep13.npz --seg &
+# wait
+# # SwinUNETR3D fold1과 fold2는 x6로 동일한 exp_path를 사용함
+
+# # MASAM3D from CAMCAN
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en CamCan_to_PING_experiment_MASAM3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D/best_weights_ep45.npz --seg &
+# sleep 20
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en CamCan_to_PING_experiment_MASAM3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D_x1/best_weights_ep36.npz --seg &
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en CamCan_to_PING_experiment_MASAM3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_MASAM3D_x2/best_weights_ep50.npz --seg &
+# sleep 20
+
+
+# # MedNext3D from CAMCAN
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en CamCan_to_PING_experiment_mednext3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_mednext3D/best_weights_ep26.npz --seg &
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en CamCan_to_PING_experiment_mednext3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_mednext3D_x5/best_weights_ep26.npz --seg &
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en CamCan_to_PING_experiment_mednext3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/CamCan_experiment_mednext3D_x4/best_weights_ep30.npz --seg &
+# sleep 20
+
+# # from HCP + CamCan
+# # TractSeg2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_to_PING_experiment_TractSeg_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg_x6/best_weights_ep45.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_to_PING_experiment_TractSeg_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg_x7/best_weights_ep32.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg --en HCP_CamCan_to_PING_experiment_TractSeg_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg_x8/best_weights_ep45.npz --seg & 
+# sleep 20
+
+# # TractSeg3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_to_PING_experiment_TractSeg3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg3D_x9/best_weights_ep9.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_to_PING_experiment_TractSeg3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg3D_x10/best_weights_ep5.npz --seg & 
+# sleep 20
+
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_TractSeg3D --en HCP_CamCan_to_PING_experiment_TractSeg3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_TractSeg3D_x11/best_weights_ep6.npz --seg & 
+# wait
+
+# # SwinUNETR2D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_to_PING_experiment_swinunetr_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr_x6/best_weights_ep38.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_to_PING_experiment_swinunetr_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr_x7/best_weights_ep32.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr --en HCP_CamCan_to_PING_experiment_swinunetr_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr_x8/best_weights_ep26.npz --seg & 
+# sleep 20
+
+# # SwinUNETR3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_to_PING_experiment_swinunetr3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr3D_x3/best_weights_ep3.npz --seg & 
+# wait
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_to_PING_experiment_swinunetr3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr3D_x4/best_weights_ep5.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_swinunetr3D --en HCP_CamCan_to_PING_experiment_swinunetr3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_swinunetr3D_x5/best_weights_ep5.npz --seg & 
+# sleep 20
+# # MASAM3D
+# ./ExpRunner --fold 0 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_MASAM3D/best_weights_ep19.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_to_Ping_experiment_MASAM3D_inference_x1 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+# ./ExpRunner --fold 1 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_MASAM3D_x1/best_weights_ep14.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_to_PING_experiment_MASAM3D_inference_x2 --train False --test True --gradient_clip 1 --seg & 
+# wait
+# ./ExpRunner --fold 2 --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_MASAM3D_x2/best_weights_ep20.npz --data_path $DATA_PATH --config Ping_experiment_MASAM3D_x1 --en HCP_CamCan_to_PING_experiment_MASAM3D_inference_x3 --train False --test True --gradient_clip 1 --seg & 
+# sleep 20
+
+# # MedNext3D
+# ./ExpRunner --fold 0 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_to_PING_experiment_mednext3D_inference_x1 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_mednext3D/best_weights_ep11.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 1 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_to_PING_experiment_mednext3D_inference_x2 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_mednext3D_x1/best_weights_ep11.npz --seg & 
+# sleep 20
+
+# ./ExpRunner --fold 2 --data_path $DATA_PATH --config Ping_experiment_mednext3D --en HCP_CamCan_to_PING_experiment_mednext3D_inference_x3 --train False --test True --lw --weights_path /mnt/storage/junb/hcp_ecp/HCP_CamCan_experiment_mednext3D_x2/best_weights_ep14.npz --seg & 
+# wait

@@ -17,12 +17,6 @@ import torch.optim.lr_scheduler as lr_scheduler
 from torch.optim.lr_scheduler import _LRScheduler
 from tractseg.libs.lr_scheduler import CosineAnnealingWarmUpRestarts
 import torch.nn.functional as F
-try:
-    from apex import amp
-    APEX_AVAILABLE = True
-except ImportError:
-    APEX_AVAILABLE = False
-    pass
 
 # Use PyTorch native AMP so fp16 also works without Apex.
 PYTORCH_AMP_AVAILABLE = True
@@ -31,8 +25,6 @@ from tractseg.libs import pytorch_utils
 from tractseg.libs import exp_utils
 from tractseg.libs import metric_utils
 from tractseg.data import dataset_specific_utils
-
-from monai.networks.nets import UNet, ViTAutoEnc
 
 import math
 from torch.optim import Optimizer
@@ -43,12 +35,10 @@ from collections import defaultdict
 # Latent diffusion models
 #from diffusers import StableDiffusionPipeline, UNet2DConditionModel, DDPMScheduler
 
-# MA-SAM
-from segment_anything import sam_model_registry
-from sam_fact_tt_image_encoder import Fact_tt_Sam
-
-# MEDNEXT v1
-from mednext.nnunet_mednext import create_mednext_v1
+# MA-SAM and MedNeXt are vendored under tractseg.models so this repository can
+# run as one code base without top-level model packages.
+from tractseg.models.segment_anything import sam_model_registry
+from tractseg.models.mednext import create_mednext_v1
 
 #DDP
 
@@ -112,22 +102,6 @@ class BaseModel:
         elif self.Config.MODEL.lower() == 'mednext_v1':
             self.net = create_mednext_v1(num_input_channels=NR_OF_GRADIENTS, num_classes=self.Config.NR_OF_CLASSES, model_id = 'B', kernel_size=3, deep_supervision = self.Config.DEEP_SUPERVISION)
 
-        elif self.Config.MODEL.lower() == 'nnformer':
-            NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
-                                   self.Config.MODEL)
-            self.net = NetworkClass(img_size=self.Config.INPUT_DIM,in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]),use_v2=True, feature_size=self.Config.FEATURE_SIZE)
-            # if self.Config.WEIGHTS_PATH:
-            #     weight = torch.load(self.Config.WEIGHTS_PATH)
-            #     self.net.load_from(weights=weight)
-            #     print("Using pretrained self-supervied Swin UNETR backbone weights !")
-        elif self.Config.MODEL == 'LatentDiffusionModel':
-            NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
-                                   self.Config.MODEL)
-            self.net = NetworkClass(in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES)
-            if self.Config.WEIGHTS_PATH:
-                weight = torch.load(self.Config.WEIGHTS_PATH)
-                self.net.load_from(weights=weight)
-                print("Using pretrained self-supervied Swin UNETR backbone weights !")
         elif self.Config.MODEL == 'MASAM':
             # note that previously, it automatically loaded weight from WEIGHTS_PATH if RESUME_TRAINING is False
             # for now, you should specify LOAD_WEIGHTS as True to load weight for WEIGHTS_PATH
@@ -135,15 +109,14 @@ class BaseModel:
                                                                 num_classes=self.Config.NR_OF_CLASSES-1,
                                                                 checkpoint=self.Config.WEIGHTS_PATH if (not self.Config.RESUME_TRAINING) and (self.Config.LOAD_WEIGHTS) and (self.Config.WEIGHTS_PATH.endswith('.pth')) else None, in_chans=9, pixel_mean=[0., 0., 0.],
                                                                 pixel_std=[1., 1., 1.])
-            pkg = importlib.import_module(self.Config.module)
+            module_name = getattr(self.Config, "module", "tractseg.models.masam")
+            if module_name == "sam_fact_tt_image_encoder":
+                module_name = "tractseg.models.masam"
+            pkg = importlib.import_module(module_name)
             self.net = pkg.Fact_tt_Sam(sam, self.Config.rank, s=self.Config.scale)
 
             if self.Config.WEIGHTS_PATH.endswith('.pth'):
                 self.Config.LOAD_WEIGHTS = False # set to False to avoid loading weight by default pytorch load_checkpoint, but use its own way of loading weights
-        elif self.Config.MODEL.lower() == 'monai_unet':
-            self.net = UNet(in_channels=NR_OF_GRADIENTS, out_channels=self.Config.NR_OF_CLASSES, spatial_dims=int(self.Config.DIM[0]), channels=(4, 8, 16), strides=(2, 2))
-        elif self.Config.MODEL.lower() == 'monai_vitautoenc':
-            self.net = ViTAutoEnc(in_channels=NR_OF_GRADIENTS,img_size=tuple([int(self.Config.INPUT_DIM[-1])] *int(self.Config.DIM[0]) ), spatial_dims=int(self.Config.DIM[0]), out_channels=self.Config.NR_OF_CLASSES, patch_size=(16,16,16), pos_embed='conv')
         else:
             NetworkClass = getattr(importlib.import_module("tractseg.models." + self.Config.MODEL.lower()),
                                    self.Config.MODEL)
@@ -176,7 +149,7 @@ class BaseModel:
         else:
             raise ValueError("Optimizer not defined")
 
-        if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
+        if PYTORCH_AMP_AVAILABLE and self.Config.FP16:
             # Use PyTorch native AMP instead of Apex
             if not inference:
                 print("INFO: Using PyTorch native fp16 training")
@@ -184,7 +157,7 @@ class BaseModel:
             if not inference:
                 print("INFO: Did not find AMP support, defaulting to fp32 training")
 
-        if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
+        if PYTORCH_AMP_AVAILABLE and self.Config.FP16:
             self.scaler = GradScaler()
 
         if self.Config.LR_SCHEDULE:
@@ -224,7 +197,7 @@ class BaseModel:
         # if self.Config.RESET_LAST_LAYER:
         #     self.net.conv_5 = nn.Conv2d(self.Config.UNET_NR_FILT, self.Config.NR_OF_CLASSES, kernel_size=1,
         #                                 stride=1, padding=0, bias=True).to(self.device)
-    def train(self, X, y, weight_factor=None, timesteps=None, type=None):
+    def train(self, X, y, weight_factor=None, type=None):
         X = X.contiguous().to(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
         y = y.contiguous().to(self.device, non_blocking=True)  # (bs, nr_of_channels, x, y, z) for 3D and (bs, slices, features, x, y) for 2D
         metrics = {}
@@ -281,11 +254,9 @@ class BaseModel:
             self.net.train(False)
         self.optimizer.zero_grad() 
         if type == 'train':
-            if (APEX_AVAILABLE or PYTORCH_AMP_AVAILABLE) and self.Config.FP16:
+            if PYTORCH_AMP_AVAILABLE and self.Config.FP16:
                 with autocast():
-                    if self.Config.MODEL == 'LatentDiffusionModel':
-                        outputs = self.net(X, timesteps)
-                    elif self.Config.MODEL == 'MASAM':
+                    if self.Config.MODEL == 'MASAM':
                         outputs = self.net(batched_input=X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
                         outputs = outputs['low_res_logits']
                     else:
@@ -328,9 +299,7 @@ class BaseModel:
                 self.scaler.update()
 
             else:
-                if self.Config.MODEL == 'LatentDiffusionModel':
-                    outputs = self.net(X, timesteps)
-                elif self.Config.MODEL == 'MASAM':
+                if self.Config.MODEL == 'MASAM':
                     outputs = self.net(X, multimask_output=True, image_size=self.Config.INPUT_DIM[-1] if not self.Config.RESIZE else self.Config.RESIZE)
                     outputs = outputs['low_res_logits']
                 else:

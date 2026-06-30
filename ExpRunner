@@ -133,8 +133,8 @@ def main():
     Config = getattr(importlib.import_module("tractseg.experiments.base"), "Config")()
     if args.config:
         # Config.__dict__ does not work properly therefore use this approach
-        # Config in custom py file (tractseg/experiments/custom/my_custom_experiment.py)
-        Config = getattr(importlib.import_module("tractseg.experiments.custom." + args.config), "Config")()
+        # Config in custom py file (configs/my_custom_experiment.py at the repo root)
+        Config = getattr(importlib.import_module("configs." + args.config), "Config")()
 
     if args.en:
         Config.EXP_NAME = args.en # update Config.EXP_NAME
@@ -272,11 +272,6 @@ def main():
     # we do not need this, since we use neptune to log hyperparameters.
     #pkl.dump(Config, open(join(Config.EXP_PATH, "Hyperparameters.pkl"), "wb"))
 
-    if Config.MODEL == "LatentDiffusionModel":
-        scheduler = DDPMScheduler(beta_start=0.0001, beta_end=0.02, num_train_timesteps=1000)
-    else:
-        scheduler = None
-
     # Define model
     model = BaseModel(Config)
 
@@ -287,7 +282,7 @@ def main():
 
     if Config.TRAIN:
         print("Training...")
-        trainer.train_model(Config, model, run, scheduler=scheduler)
+        trainer.train_model(Config, model, run)
         # run["train/loss"].append(0.9 ** epoch) # <- why??, which means epoch here?
 
         # Have to load other weights, because after training it has the weights of the last epoch
